@@ -31,7 +31,7 @@ Used on a phone at home, typically the evening before class. The supplied timeta
 - Reusable subject library with a subject name, a list of default carry items, or an explicit no-items state.
 - Editable weekly Monday-to-Friday timetable whose entries reference subjects and only own weekday, period, and time.
 - Tomorrow view that groups repeated lessons by subject and persists a separate check state for every individual item.
-- Offline-only local storage with sensible sample data transcribed from the supplied image.
+- Offline-only local storage. A fresh installation starts empty so each user can create their own subjects and timetable.
 - Directional screen and bottom-sheet transitions, while respecting the system animator-duration setting.
 - Chinese user interface.
 
