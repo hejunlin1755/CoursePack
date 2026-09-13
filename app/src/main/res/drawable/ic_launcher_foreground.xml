@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- soft offset silhouette gives the bag depth without a shadow effect -->
+    <path android:fillColor="#352662" android:fillAlpha="0.22" android:pathData="M34,37 H74 C80,37 84,42 84,48 V76 C84,82 80,86 74,86 H36 C30,86 26,82 26,76 V48 C26,42 30,37 34,37 Z" />
+    <!-- handle -->
+    <path android:fillColor="@android:color/transparent" android:strokeColor="#34245F" android:strokeWidth="6" android:strokeLineCap="round" android:pathData="M44,38 V31 C44,26 48,22 53,22 H57 C62,22 66,26 66,31 V38" />
+    <!-- expressive backpack body -->
+    <path android:fillColor="#523B91" android:pathData="M32,35 H72 C78,35 82,40 82,46 V74 C82,80 78,84 72,84 H32 C26,84 22,80 22,74 V46 C22,40 26,35 32,35 Z" />
+    <path android:fillColor="#7558C5" android:pathData="M22,47 C34,40 70,40 82,47 V54 C68,49 36,49 22,54 Z" />
+    <!-- warm hardware accents -->
+    <path android:fillColor="#FFB95E" android:pathData="M22,54 H29 V66 H22 Z M75,54 H82 V66 H75 Z" />
+    <!-- a course card sits in the front pocket -->
+    <path android:fillColor="#FFF8F2" android:pathData="M34,50 H70 C74,50 77,53 77,57 V74 C77,78 74,81 70,81 H34 C30,81 27,78 27,74 V57 C27,53 30,50 34,50 Z" />
+    <path android:fillColor="#F05C7A" android:pathData="M27,57 C27,53 30,50 34,50 H70 C74,50 77,53 77,57 V59 H27 Z" />
+    <!-- check mark -->
+    <path android:fillColor="#523B91" android:pathData="M40,68 L48,75 L65,62 L69,66 L48,82 L36,72 Z" />
+</vector>

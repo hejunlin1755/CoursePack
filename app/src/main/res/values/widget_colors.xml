@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_primary">#536AA3</color>
+    <color name="widget_primary_container">#DCE2FF</color>
+    <color name="widget_on_primary_container">#162B60</color>
+    <color name="widget_surface">#F7F5FF</color>
+    <color name="widget_text">#1A1B20</color>
+    <color name="widget_muted">#585E71</color>
+    <color name="widget_success">#2F6B3D</color>
+    <color name="widget_progress_surface">#3149A3</color>
+    <color name="widget_progress_text">#F0F1FF</color>
+    <color name="widget_progress_text_secondary">#DCE2FF</color>
+    <color name="widget_progress_segment_pending">#5B6381</color>
+    <color name="widget_progress_segment_done">#F0F1FF</color>
+</resources>

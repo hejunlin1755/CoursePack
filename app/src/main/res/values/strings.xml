@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">课程包</string>
+    <string name="widget_description">查看明天的书包准备进度，点击进入课程包继续打卡</string>
+</resources>

@@ -1,0 +1,180 @@
+---
+name: 课程包
+description: 像整理书包标签一样清楚、轻快的次日课程准备工具
+colors:
+  primary-fallback: "#6750A4"
+  primary-dark-fallback: "#D0BCFF"
+  paper-light: "#FFF7FF"
+  paper-dark: "#151218"
+  surface-light: "#F3EDF7"
+  surface-dark: "#2B2930"
+  ink-light: "#1D1B20"
+  ink-dark: "#EAE0EC"
+  success-light: "#2F6B3D"
+  success-dark: "#9BD4A8"
+typography:
+  display:
+    fontFamily: "sans"
+    fontSize: 36sp
+    fontWeight: 700
+    letterSpacing: -0.02em
+  headline:
+    fontFamily: "sans"
+    fontSize: 28sp
+    fontWeight: 700
+  title:
+    fontFamily: "sans"
+    fontSize: 19sp
+    fontWeight: 700
+  body:
+    fontFamily: "sans"
+    fontSize: 16sp
+    fontWeight: 400
+  label:
+    fontFamily: "sans"
+    fontSize: 14sp
+    fontWeight: 700
+rounded:
+  field: 15dp
+  card: 24dp
+  hero: 30dp
+  navigation-indicator: 18dp
+spacing:
+  compact: 8dp
+  content: 20dp
+  section: 22dp
+components:
+  course-list:
+    background: "{colors.surface-light}"
+    color: "{colors.ink-light}"
+    borderRadius: "{rounded.card}"
+    padding: "10dp 12dp"
+  primary-button:
+    background: "{colors.primary-fallback}"
+    color: "#FFFFFF"
+    borderRadius: "{rounded.card}"
+    padding: "14dp 20dp"
+---
+
+# Design System: 课程包
+
+## Overview
+
+**Creative North Star: "书包标签板"**
+
+课程不是表格里的格子，而是一张睡前就能完成的装包清单。界面以 Android 原生 Material 3 结构为骨架，用清楚的明日状态、紧凑的连续课程列表、动态色和大触控目标形成 Expressive 的节奏；打开应用即可知道明天上什么、还差几科、每科要带什么。
+
+**Key Characteristics:**
+
+- 壁纸动态色优先，静态紫色调作为可靠回退。
+- “明日”是默认首页，“课表”负责安排已有科目，“科目”统一管理携带物。
+- 大标题与清楚的课程层级，不使用传统网格课表。
+- 连续课程列表把同一天组织成一个整体；每行遵循 Material 三行 List Item 的 leading / headline / supporting / trailing 结构。
+- 导航、编辑和打卡动效具有明确方向，并服从系统动画设置。
+
+## Colors
+
+浅色模式使用温暖的淡紫纸面，深色模式使用接近黑紫的低亮表面；Android 12 以上由系统 Material You 强调色接管主色。
+
+### Primary
+
+- **壁纸强调色**：用于星期选中、主进度容器、主按钮和浮动添加按钮；无动态色时使用 frontmatter 中的主色回退。
+
+### Secondary
+
+- **标签浅紫**：用于节次方块、选中导航背景和低强调交互面。
+
+### Neutral
+
+- **纸面**：整屏背景，浅色与深色均带轻微紫温度。
+- **高位表面**：课程卡、输入框和底部导航的主要容器色。
+- **墨色**：标题与正文；次要说明使用同色相、较低对比的紫灰。
+
+**The Dynamic First Rule.** Android 12 以上优先读取系统色角色，回退色只保证旧系统的一致性。
+
+## Typography
+
+**Display Font:** Android sans / Roboto fallback
+**Body Font:** Android sans / Roboto fallback
+
+**Character:** 标题厚重而直接，正文保持系统原生的熟悉感。所有字号使用 sp，随系统字体缩放。
+
+### Hierarchy
+
+- **Display** (700, 36sp): 页面唯一主标题。
+- **Headline** (700, 28sp): 编辑底页与关键容器标题。
+- **Title** (700, 19sp): 科目名称。
+- **Body** (400, 16sp): 页面说明与主要辅助内容。
+- **Label** (700, 14sp): 导航、星期与操作标签。
+
+**The One Loud Line Rule.** 每个页面只允许一个 Display 级标题，其余信息通过容器与间距建立层级。
+
+## Layout
+
+紧凑手机使用单列滚动布局，左右内容边距 20dp；明日页以 30dp 圆角的主色进度面板建立焦点，再呈现连续课程列表。课表页以五等分的 Material 分段控件切日。课程行没有固定宽度的正文或时间列，320dp 宽度与 130% 字体下仍可自适应。底部导航固定并应用系统导航栏 inset，带文字的“添加课程”浮动按钮停靠在内容与导航的交界处。触控目标不小于 48dp。
+
+## Elevation & Depth
+
+系统以色调层级而不是边框堆叠表达深度。课程卡保持无边框、无阴影；只有浮动添加按钮和编辑页主操作使用 Android 原生柔和 elevation，明确它们可被抬起操作。
+
+**The Tonal Before Shadow Rule.** 新层级先选择正确的 surface 色调，只有真实浮动控件才增加阴影。
+
+## Shapes
+
+输入使用 15dp 圆角，连续课程列表外壳使用 24dp，主进度容器使用 30dp，底部导航的选中指示器使用 18dp。星期分段控件与 28dp 勾选状态使用小型圆角形状；大内容容器保持圆角矩形，不滥用整页胶囊。
+
+## Components
+
+### Buttons
+
+- **Primary:** 动态主色填充、22dp 圆角、粗体标签；按压使用系统 ripple。
+- **Secondary:** 高位表面色填充，用于删除等次要操作，并保留语义色文字。
+
+### Chips
+
+- **Style:** 星期选择为五等分的 44–48dp 高分段控件；选中为主色容器，未选中融入高位表面。
+- **State:** 背景与前景同时变化，不能只靠颜色很细微的差异。
+
+### Course List / Containers
+
+- **Corner Style:** 同一天的课程共用 22dp 外壳，主进度容器 28dp。
+- **Background:** 高位表面；已打卡行切换到成功色的低饱和容器。
+- **Separation:** 用留白与轻量分隔组织行，不把每节课重复做成悬浮卡片。
+- **Anatomy:** 48dp leading 触控区、可换行 headline、时间和携带物 supporting text、明确的 trailing 编辑箭头。
+- **Responsive:** 禁止固定宽度时间列；正文使用剩余宽度，在窄屏和大字体下向下增长。
+
+### Inputs / Fields
+
+- **Style:** 高位表面填充、15dp 圆角、无常驻描边，56dp 最小高度。
+- **Focus:** 使用 Android 原生光标、键盘与焦点反馈；错误直接显示在对应字段。
+- **Item Builder:** 每件携带物占一个输入格并拥有独立移除按钮；新增操作永远在输入格列表末尾，不使用分隔符解析作为主交互。
+
+### Navigation
+
+底部导航使用标准 80dp tonal surface；三个目的地分别是“明日 / 课表 / 科目”。图标位于独立选中指示器内，文字标签在指示器下方。应用默认打开“明日”，系统返回可从其他页回到明日。
+
+底栏图标统一使用 24dp 的圆润填充轮廓，不用多段细描边拼接。明日为日程完成块、课表为月历网格、科目为叠层资料册；选中状态通过 Material tonal indicator 和前景色共同表达。
+
+连续快速切换时，新导航动作必须取消上一段未完成的共享轴动画，并将内容容器收敛为唯一当前页；任何时刻不得积累不可见或半透明的历史页面。
+
+### Launcher Icon
+
+启动图标采用浅紫底、深紫书包主体，以及从前袋露出的暖白课程表卡片。课程表用珊瑚、琥珀和浅紫信息格表达，不使用突兀对勾。生成式前景通过透明 PNG 与 18% 系统 inset 严格落入 adaptive icon 安全区，并另有单色主题图标。
+
+### Packing Check
+
+每个携带物拥有独立的 28dp 勾选状态和 48dp 触控目标；同一科目同一天出现多次时只展示一组携带物。勾选在原位更新，不重建 ScrollView；状态图标回弹、文字划线且进度段同步变化。没有携带物的科目必须显式标记“无需携带物品”，不能与“尚未设置”混淆，并用单行状态卡避免无意义留白。
+
+## Do's and Don'ts
+
+### Do:
+
+- **Do** 让科目、时间与携带物保持在同一条连续课程行中。
+- **Do** 使用共享轴的上下方向表达进入与返回。
+- **Do** 在 130% 字体、深色模式和系统关闭动画时保持可用。
+
+### Don't:
+
+- **Don't** 把课表退回密集、难点按的传统二维表格。
+- **Don't** 用额外账号、云同步或联网阻断装包流程。
+- **Don't** 用边框、渐变或装饰阴影替代清楚的色调层级。

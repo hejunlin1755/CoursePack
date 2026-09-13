@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:gravity="center_vertical"
+    android:padding="16dp" android:background="@drawable/widget_progress_background">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:includeFontPadding="false" android:text="书包进度" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/widget_progress_text_secondary" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="9dp" android:includeFontPadding="false" android:text="还差 5 件" android:textSize="25sp" android:textStyle="bold" android:textColor="@color/widget_progress_text" />
+    <TextView android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
+    <TextView android:layout_width="match_parent" android:layout_height="6dp" android:background="@drawable/widget_segment_pending" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:includeFontPadding="false" android:text="3 / 8 已装好" android:textSize="12sp" android:textColor="@color/widget_progress_text_secondary" />
+</LinearLayout>

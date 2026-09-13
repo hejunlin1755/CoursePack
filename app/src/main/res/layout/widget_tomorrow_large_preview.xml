@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="horizontal" android:gravity="center_vertical"
+    android:padding="18dp" android:background="@drawable/widget_progress_background">
+    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1.2" android:orientation="vertical" android:gravity="center_vertical">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:includeFontPadding="false" android:text="明日书包" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/widget_progress_text_secondary" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="5dp" android:includeFontPadding="false" android:text="还差 5 件" android:textSize="28sp" android:textStyle="bold" android:textColor="@color/widget_progress_text" />
+        <TextView android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
+        <TextView android:layout_width="match_parent" android:layout_height="6dp" android:background="@drawable/widget_segment_pending" />
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="7dp" android:includeFontPadding="false" android:text="3 / 8 已装好" android:textSize="12sp" android:textColor="@color/widget_progress_text_secondary" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="0.8" android:layout_marginStart="16dp" android:gravity="center_vertical" android:orientation="vertical" android:padding="14dp" android:background="@drawable/widget_detail_background">
+        <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="3dp" android:includeFontPadding="false" android:text="还没装" android:textSize="10sp" android:textStyle="bold" android:textColor="@color/widget_progress_text_secondary" />
+        <LinearLayout android:layout_width="match_parent" android:layout_height="25dp" android:orientation="horizontal" android:gravity="center_vertical"><ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" /><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="7dp" android:includeFontPadding="false" android:text="科学书" android:textSize="12sp" android:textColor="@color/widget_progress_text" /></LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="25dp" android:orientation="horizontal" android:gravity="center_vertical"><ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" /><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="7dp" android:includeFontPadding="false" android:text="笔袋" android:textSize="12sp" android:textColor="@color/widget_progress_text" /></LinearLayout>
+        <LinearLayout android:layout_width="match_parent" android:layout_height="25dp" android:orientation="horizontal" android:gravity="center_vertical"><ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" /><TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="7dp" android:includeFontPadding="false" android:text="水杯" android:textSize="12sp" android:textColor="@color/widget_progress_text" /></LinearLayout>
+    </LinearLayout>
+</LinearLayout>

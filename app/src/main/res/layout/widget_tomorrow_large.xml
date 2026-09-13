@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="18dp"
+    android:paddingTop="13dp"
+    android:paddingEnd="18dp"
+    android:paddingBottom="13dp"
+    android:background="@drawable/widget_progress_background">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1.2"
+        android:orientation="vertical"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="28dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/widget_day_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:includeFontPadding="false"
+                android:text="明日书包"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/widget_progress_text_secondary" />
+
+            <ImageView
+                android:id="@+id/widget_complete_icon"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:padding="6dp"
+                android:src="@drawable/ic_check"
+                android:tint="@color/widget_progress_surface"
+                android:background="@drawable/widget_complete_badge"
+                android:contentDescription="全部装好了"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/widget_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="3dp"
+            android:includeFontPadding="false"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_progress_text"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <TextView android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
+
+        <include
+            layout="@layout/widget_segments"
+            android:layout_width="match_parent"
+            android:layout_height="6dp" />
+
+        <TextView
+            android:id="@+id/widget_progress"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dp"
+            android:includeFontPadding="false"
+            android:textSize="12sp"
+            android:textColor="@color/widget_progress_text_secondary"
+            android:maxLines="1"
+            android:ellipsize="end" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/widget_detail"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="0.8"
+        android:layout_marginStart="16dp"
+        android:gravity="center_vertical"
+        android:orientation="vertical"
+        android:paddingStart="14dp"
+        android:paddingTop="10dp"
+        android:paddingEnd="14dp"
+        android:paddingBottom="10dp"
+        android:background="@drawable/widget_detail_background">
+
+        <LinearLayout
+            android:id="@+id/widget_pending_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="3dp"
+                android:includeFontPadding="false"
+                android:text="还没装"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:textColor="@color/widget_progress_text_secondary" />
+
+            <LinearLayout android:id="@+id/widget_pending_row_1" android:layout_width="match_parent" android:layout_height="25dp" android:orientation="horizontal" android:gravity="center_vertical">
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" android:contentDescription="未装" />
+                <TextView android:id="@+id/widget_pending_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="7dp" android:includeFontPadding="false" android:textSize="12sp" android:textColor="@color/widget_progress_text" android:maxLines="1" android:ellipsize="end" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/widget_pending_row_2" android:layout_width="match_parent" android:layout_height="25dp" android:orientation="horizontal" android:gravity="center_vertical">
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" android:contentDescription="未装" />
+                <TextView android:id="@+id/widget_pending_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="7dp" android:includeFontPadding="false" android:textSize="12sp" android:textColor="@color/widget_progress_text" android:maxLines="1" android:ellipsize="end" />
+            </LinearLayout>
+            <LinearLayout android:id="@+id/widget_pending_row_3" android:layout_width="match_parent" android:layout_height="25dp" android:orientation="horizontal" android:gravity="center_vertical">
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" android:contentDescription="未装" />
+                <TextView android:id="@+id/widget_pending_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="7dp" android:includeFontPadding="false" android:textSize="12sp" android:textColor="@color/widget_progress_text" android:maxLines="1" android:ellipsize="end" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/widget_detail_state"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center">
+            <ImageView
+                android:id="@+id/widget_detail_complete_icon"
+                android:layout_width="34dp"
+                android:layout_height="34dp"
+                android:padding="8dp"
+                android:src="@drawable/ic_check"
+                android:tint="@color/widget_progress_surface"
+                android:background="@drawable/widget_complete_badge"
+                android:contentDescription="全部完成"
+                android:visibility="gone" />
+            <TextView
+                android:id="@+id/widget_detail_state_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="7dp"
+                android:gravity="center"
+                android:includeFontPadding="false"
+                android:textSize="12sp"
+                android:textColor="@color/widget_progress_text"
+                android:maxLines="3"
+                android:ellipsize="end" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>
