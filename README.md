@@ -18,6 +18,8 @@
 
 ## 截图
 
+<p align="center"><sub>v2.3.0 Android 模拟器实机渲染，课程与携带物为演示数据。</sub></p>
+
 <p align="center">
   <img src="docs/images/home.png" width="30%" alt="书包准备清单" />
   <img src="docs/images/schedule.png" width="30%" alt="每周课程表" />
