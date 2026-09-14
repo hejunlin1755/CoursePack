@@ -49,6 +49,7 @@ Material 3 Expressive is a binding visual and interaction reference.
 ## Product Principles
 
 - Packing tomorrow's bag should take under a minute without the list moving after a check.
+- Before noon the checklist targets today; from 12:00 onward it targets the next scheduled school day.
 - Taking an unneeded item out must update in place without returning the checklist to the top.
 - Editing a subject once must update every timetable occurrence of that subject.
 - Keep the schedule readable before adding decoration.

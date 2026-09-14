@@ -254,7 +254,7 @@ class WidgetData {
     }
 
     private static LocalDate resolveDate(List<CoursePackActivity.Entry> entries) {
-        LocalDate candidate = LocalTime.now().isBefore(LocalTime.of(18, 0)) ? LocalDate.now() : LocalDate.now().plusDays(1);
+        LocalDate candidate = LocalTime.now().isBefore(LocalTime.of(CoursePackActivity.PREPARATION_SWITCH_HOUR, 0)) ? LocalDate.now() : LocalDate.now().plusDays(1);
         if (entries.isEmpty()) {
             while (candidate.getDayOfWeek().getValue() > 5) candidate = candidate.plusDays(1);
             return candidate;

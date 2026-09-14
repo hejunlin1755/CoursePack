@@ -51,6 +51,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public class CoursePackActivity extends Activity {
+    static final int PREPARATION_SWITCH_HOUR = 12;
     private static final String PREFS = "course_pack_data_v1";
     private static final String KEY_LEGACY_COURSES = "courses";
     private static final String KEY_SUBJECTS = "subjects_v2";
@@ -244,7 +245,7 @@ public class CoursePackActivity extends Activity {
     }
 
     private LocalDate resolveChecklistDate(){
-        LocalDate candidate=LocalTime.now().isBefore(LocalTime.of(18,0))?LocalDate.now():LocalDate.now().plusDays(1);
+        LocalDate candidate=LocalTime.now().isBefore(LocalTime.of(PREPARATION_SWITCH_HOUR,0))?LocalDate.now():LocalDate.now().plusDays(1);
         if(entries.isEmpty()){while(candidate.getDayOfWeek().getValue()>5)candidate=candidate.plusDays(1);return candidate;}
         for(int i=0;i<8;i++){
             int day=candidate.getDayOfWeek().getValue()-1;
