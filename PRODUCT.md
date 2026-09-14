@@ -32,6 +32,7 @@ Used on a phone at home, typically the evening before class. The supplied timeta
 - Editable weekly Monday-to-Friday timetable whose entries reference subjects and only own weekday, period, and time.
 - Native time pickers for individual lessons plus reusable batch generation from start time, lesson duration, break duration, period range, and selected weekdays.
 - Tomorrow view that groups repeated lessons by subject and persists a separate check state for every individual item.
+- Take-out guidance that surfaces packed items not required on the current preparation day and removes them from the bag state one item at a time.
 - Offline-only local storage. A fresh installation starts empty so each user can create their own subjects and timetable.
 - Directional screen and bottom-sheet transitions, while respecting the system animator-duration setting.
 - Chinese user interface.
@@ -48,6 +49,7 @@ Material 3 Expressive is a binding visual and interaction reference.
 ## Product Principles
 
 - Packing tomorrow's bag should take under a minute without the list moving after a check.
+- Taking an unneeded item out must update in place without returning the checklist to the top.
 - Editing a subject once must update every timetable occurrence of that subject.
 - Keep the schedule readable before adding decoration.
 - Preserve user data locally and work without an account or network.

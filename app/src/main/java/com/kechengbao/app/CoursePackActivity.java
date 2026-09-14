@@ -1,5 +1,8 @@
 package com.kechengbao.app;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Intent;
@@ -18,6 +21,7 @@ import android.util.Base64;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.WindowManager;
@@ -71,7 +75,8 @@ public class CoursePackActivity extends Activity {
     private LocalDate checklistDate;
     private int pageTransitionId;
     private int bg, surface, surfaceHigh, text, muted, primary, onPrimary, primaryContainer, onPrimaryContainer,
-            secondary, onSecondary, tertiaryContainer, onTertiaryContainer, outline, success;
+            secondary, onSecondary, tertiaryContainer, onTertiaryContainer, outline, success,
+            warningContainer, onWarningContainer, warningAccent;
     private boolean dark;
     private final PathInterpolator emphasized = new PathInterpolator(.2f, 0f, 0f, 1f);
 
@@ -115,6 +120,8 @@ public class CoursePackActivity extends Activity {
         surfaceHigh = dark ? 0xFF2B2930 : 0xFFF4EFF7; text = dark ? 0xFFEAE0EC : 0xFF1D1B20;
         muted = dark ? 0xFFCAC4D0 : 0xFF625B71; outline = dark ? 0xFF49454F : 0xFFE3DDE7;
         success = dark ? 0xFF9BD4A8 : 0xFF2F6B3D;
+        warningContainer = dark ? 0xFF3B2D17 : 0xFFFFEBC8; onWarningContainer = dark ? 0xFFFFE1AD : 0xFF3D2B09;
+        warningAccent = dark ? 0xFFFFB95C : 0xFF8A5A00;
     }
 
     private int systemColor(String name, int fallback) {
@@ -204,8 +211,31 @@ public class CoursePackActivity extends Activity {
         tomorrowStatus=label(progressStatus(tomorrowTotalItems,done,tomorrowMissingSubjects),26,onPrimaryContainer,true);hero.addView(tomorrowStatus,margin(-1,-2,0,6,0,0));
         tomorrowProgressRow=new LinearLayout(this);tomorrowProgressRow.setOrientation(LinearLayout.HORIZONTAL);if(tomorrowTotalItems>0){buildProgressSegments(tomorrowProgressRow,tomorrowTotalItems,done);hero.addView(tomorrowProgressRow,margin(-1,10,0,16,0,0));}
         tomorrowProgressLabel=label(progressLabel(tomorrowTotalItems,done,tomorrowMissingSubjects),13,onPrimaryContainer,false);hero.addView(tomorrowProgressLabel,margin(-1,-2,0,10,0,0));page.addView(hero,margin(-1,-2,0,0,0,22));
-        if(dayEntries.isEmpty())page.addView(emptyState("还没有课程","先到课表页排课。"));else{page.addView(label("按物品准备",20,text,true));page.addView(label("已装物品会自动沿用，拿出书包后再清空",13,muted,false),margin(-1,-2,0,4,0,12));for(Map.Entry<Subject,List<Entry>> group:grouped.entrySet())page.addView(subjectChecklist(group.getKey(),group.getValue()),margin(-1,-2,0,0,0,12));}
+        List<BagItem> takeOutItems=packedItemsNotNeededFor(grouped);if(!takeOutItems.isEmpty())page.addView(takeOutSection(takeOutItems),margin(-1,-2,0,0,0,22));
+        if(dayEntries.isEmpty())page.addView(emptyState("还没有课程","先到课表页排课。"));else{page.addView(label("按物品准备",20,text,true));page.addView(label("已装状态会自动沿用，也可以逐件标记拿出",13,muted,false),margin(-1,-2,0,4,0,12));for(Map.Entry<Subject,List<Entry>> group:grouped.entrySet())page.addView(subjectChecklist(group.getKey(),group.getValue()),margin(-1,-2,0,0,0,12));}
         scroll.addView(page);return scroll;
+    }
+
+    private View takeOutSection(List<BagItem> items){
+        LinearLayout section=column();section.setPadding(dp(16),dp(16),dp(12),dp(12));section.setBackground(shape(warningContainer,26,0,0));
+        LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);ImageView icon=new ImageView(this);icon.setImageResource(R.drawable.ic_take_out);icon.setColorFilter(dark?0xFF3D2B09:Color.WHITE);icon.setPadding(dp(9),dp(9),dp(9),dp(9));icon.setBackground(shape(warningAccent,14,0,0));heading.addView(icon,lp(42,42));
+        LinearLayout headingCopy=column();headingCopy.addView(label("这些可以拿出",19,onWarningContainer,true));TextView summary=label(items.size()+" 件物品在当前准备日用不到",13,onWarningContainer,false);summary.setAlpha(.76f);headingCopy.addView(summary,margin(-1,-2,0,3,0,0));LinearLayout.LayoutParams headingCopyParams=new LinearLayout.LayoutParams(0,-2,1);headingCopyParams.setMargins(dp(12),0,0,0);heading.addView(headingCopy,headingCopyParams);section.addView(heading);
+        LinearLayout list=column();list.setPadding(dp(6),dp(6),dp(6),dp(2));list.setBackground(shape(surface,20,0,0));section.addView(list,margin(-1,-2,0,12,0,0));
+        int[] remaining={items.size()};for(BagItem bagItem:items)list.addView(takeOutRow(bagItem,list,section,summary,remaining),margin(-1,-2,0,0,0,4));return section;
+    }
+
+    private View takeOutRow(BagItem bagItem,LinearLayout list,LinearLayout section,TextView summary,int[] remaining){
+        LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(8),dp(5),dp(6),dp(5));row.setMinimumHeight(dp(62));row.setBackground(ripple(Color.TRANSPARENT,16));row.setContentDescription("拿出 "+bagItem.item+"，属于 "+bagItem.subject.name);row.setClickable(true);row.setFocusable(true);
+        TextView token=label(bagItem.subject.name.isEmpty()?"物":bagItem.subject.name.substring(0,1),14,onWarningContainer,true);token.setGravity(Gravity.CENTER);token.setBackground(shape(warningContainer,13,0,0));row.addView(token,lp(40,40));
+        LinearLayout copy=column();copy.addView(label(bagItem.item,16,text,true));copy.addView(label(bagItem.subject.name+" · 当前准备日用不到",12,muted,false),margin(-1,-2,0,3,0,0));LinearLayout.LayoutParams copyParams=new LinearLayout.LayoutParams(0,-2,1);copyParams.setMargins(dp(12),0,0,0);row.addView(copy,copyParams);
+        TextView action=label("拿出",13,warningAccent,true);action.setGravity(Gravity.CENTER);action.setBackground(ripple((warningAccent&0x00FFFFFF)|0x18000000,14));row.addView(action,margin(66,40,10,0,0,0));
+        row.setOnClickListener(v->removePackedItem(bagItem,row,list,section,summary,remaining));return row;
+    }
+
+    private void removePackedItem(BagItem bagItem,LinearLayout row,LinearLayout list,LinearLayout section,TextView summary,int[] remaining){
+        if(!isPacked(bagItem.subject.id,bagItem.item)||!row.isEnabled())return;row.performHapticFeedback(HapticFeedbackConstants.CONFIRM);row.setEnabled(false);setPacked(bagItem.subject.id,bagItem.item,false);saveChecks();updateClearChecksButton();
+        Runnable removed=()->{list.removeView(row);remaining[0]--;summary.setText(remaining[0]+" 件物品在当前准备日用不到");if(remaining[0]==0){ViewGroup parent=(ViewGroup)section.getParent();if(parent!=null){if(motionEnabled())section.animate().alpha(0).translationY(-dp(12)).setDuration(170).setInterpolator(emphasized).withEndAction(()->parent.removeView(section)).start();else parent.removeView(section);}}};
+        if(!motionEnabled()){removed.run();return;}int startHeight=Math.max(1,row.getHeight());row.animate().alpha(0).translationX(dp(32)).setDuration(150).setInterpolator(emphasized).withEndAction(()->{ValueAnimator collapse=ValueAnimator.ofInt(startHeight,0);collapse.setDuration(180);collapse.setInterpolator(emphasized);collapse.addUpdateListener(animation->{ViewGroup.LayoutParams params=row.getLayoutParams();params.height=(int)animation.getAnimatedValue();row.setLayoutParams(params);});collapse.addListener(new AnimatorListenerAdapter(){@Override public void onAnimationEnd(Animator animation){removed.run();}});collapse.start();}).start();
     }
 
     private void showClearChecksDialog(){
@@ -339,6 +369,7 @@ public class CoursePackActivity extends Activity {
     private int totalItems(LinkedHashMap<Subject,List<Entry>> grouped){int total=0;for(Subject subject:grouped.keySet())if(!subject.noItems)total+=subject.items.size();return total;}
     private int countMissingSubjects(LinkedHashMap<Subject,List<Entry>> grouped){int total=0;for(Subject subject:grouped.keySet())if(!subject.noItems&&subject.items.isEmpty())total++;return total;}
     private int countDoneItems(LinkedHashMap<Subject,List<Entry>> grouped){int done=0;for(Subject subject:grouped.keySet())if(!subject.noItems)for(String item:subject.items)if(isPacked(subject.id,item))done++;return done;}
+    private List<BagItem> packedItemsNotNeededFor(LinkedHashMap<Subject,List<Entry>> grouped){Set<String> needed=new HashSet<>();for(Subject subject:grouped.keySet())if(!subject.noItems)for(String item:subject.items)needed.add(packedKey(subject.id,item));List<BagItem> out=new ArrayList<>();for(Subject subject:subjects)if(!subject.noItems)for(String item:subject.items)if(isPacked(subject.id,item)&&!needed.contains(packedKey(subject.id,item)))out.add(new BagItem(subject,item));return out;}
     private String timesFor(List<Entry> source){StringBuilder b=new StringBuilder();for(Entry e:source){if(b.length()>0)b.append(" · ");b.append("第").append(e.period).append("节 ").append(e.time);}return b.toString();}
     private String subjectSummary(Subject subject){if(subject.noItems)return"无需携带物品";if(subject.items.isEmpty())return"尚未设置携带物";return joinItems(subject.items);}
     private String joinItems(List<String> items){return String.join("、",items);}
@@ -370,6 +401,7 @@ public class CoursePackActivity extends Activity {
     private static String un64(String s){return new String(Base64.decode(s,Base64.NO_WRAP|Base64.URL_SAFE),StandardCharsets.UTF_8);}
 
     interface MinutesPicked{void accept(int minutes);}
+    static class BagItem{Subject subject;String item;BagItem(Subject subject,String item){this.subject=subject;this.item=item;}}
     static class Subject{String id,name;List<String> items;boolean noItems;Subject(String id,String name,List<String> items,boolean noItems){this.id=id;this.name=name;this.items=items;this.noItems=noItems;}String encode(){return b64(id)+"|"+b64(name)+"|"+(noItems?"1":"0")+"|"+b64(String.join("\u001F",items));}static Subject decode(String line){try{String[] p=line.split("\\|",-1);List<String> items=new ArrayList<>();String raw=un64(p[3]);if(!raw.isEmpty())for(String x:raw.split("\u001F",-1))items.add(x);return new Subject(un64(p[0]),un64(p[1]),items,"1".equals(p[2]));}catch(Exception e){return null;}}}
     static class Entry{String id,subjectId,time;int day,period;Entry(String id,String subjectId,int day,int period,String time){this.id=id;this.subjectId=subjectId;this.day=day;this.period=period;this.time=time;}String encode(){return b64(id)+"|"+b64(subjectId)+"|"+day+"|"+period+"|"+b64(time);}static Entry decode(String line){try{String[] p=line.split("\\|",-1);return new Entry(un64(p[0]),un64(p[1]),Integer.parseInt(p[2]),Integer.parseInt(p[3]),un64(p[4]));}catch(Exception e){return null;}}}
     static class LegacyCourse{String id,subject,time,items;int day,period;LegacyCourse(String id,int day,int period,String subject,String time,String items){this.id=id;this.day=day;this.period=period;this.subject=subject;this.time=time;this.items=items;}static LegacyCourse decode(String line){try{String[] p=line.split("\\|",-1);return new LegacyCourse(un64(p[0]),Integer.parseInt(p[1]),Integer.parseInt(p[2]),un64(p[3]),un64(p[4]),un64(p[5]));}catch(Exception e){return null;}}}
