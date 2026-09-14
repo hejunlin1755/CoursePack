@@ -1,4 +1,8 @@
-# 课程包
+<p align="center">
+  <img src="app/src/main/res/drawable-nodpi/ic_launcher_generated_v2.png" width="132" alt="课程包应用图标" />
+</p>
+
+<h1 align="center">课程包</h1>
 
 <p align="center">
   <strong>把课程表变成真正能逐件勾选的书包清单。</strong>
@@ -15,6 +19,17 @@
 课程包是一款轻量的学生课程表与书包整理应用。每个科目的课本、笔记、作业和用品只需设置一次，排入课表后，应用会自动生成当前需要准备的清单。
 
 它没有账号系统、没有服务器、没有分析 SDK，也没有申请网络权限。不到 1 MiB 的安装包内已经包含课程表、科目库、逐件打卡、桌面小组件、深色模式、过渡动画、完成动效和震动反馈。
+
+<p align="center">
+  <a href="https://github.com/hejunlin1755/CoursePack">
+    <img src="docs/images/star-coursepack.gif" width="640" alt="点一下 GitHub Star 支持课程包" />
+  </a>
+</p>
+
+<p align="center">
+  <strong>如果课程包帮到了你，欢迎点一下右上角 Star 支持这个开源项目。</strong><br />
+  <sub>动图由 MIT 许可的 <a href="https://github.com/shinshin86/gh-star-gif">gh-star-gif</a> 生成。</sub>
+</p>
 
 ## 截图
 
