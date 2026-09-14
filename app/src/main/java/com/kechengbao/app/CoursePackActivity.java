@@ -13,13 +13,14 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
+import android.os.VibratorManager;
 import android.provider.Settings;
 import android.util.Base64;
 import android.view.Gravity;
-import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -234,7 +235,7 @@ public class CoursePackActivity extends Activity {
     }
 
     private void removePackedItem(BagItem bagItem,LinearLayout row,LinearLayout list,LinearLayout section,TextView summary,int[] remaining){
-        if(!isPacked(bagItem.subject.id,bagItem.item)||!row.isEnabled())return;row.performHapticFeedback(HapticFeedbackConstants.CONFIRM);row.setEnabled(false);setPacked(bagItem.subject.id,bagItem.item,false);saveChecks();updateClearChecksButton();
+        if(!isPacked(bagItem.subject.id,bagItem.item)||!row.isEnabled())return;vibrateTap(true);row.setEnabled(false);setPacked(bagItem.subject.id,bagItem.item,false);saveChecks();updateClearChecksButton();
         Runnable removed=()->{list.removeView(row);remaining[0]--;summary.setText(remaining[0]+" 件物品在当前准备日用不到");if(remaining[0]==0){ViewGroup parent=(ViewGroup)section.getParent();if(parent!=null){if(motionEnabled())section.animate().alpha(0).translationY(-dp(12)).setDuration(170).setInterpolator(emphasized).withEndAction(()->parent.removeView(section)).start();else parent.removeView(section);}}};
         if(!motionEnabled()){removed.run();return;}int startHeight=Math.max(1,row.getHeight());row.animate().alpha(0).translationX(dp(32)).setDuration(150).setInterpolator(emphasized).withEndAction(()->{ValueAnimator collapse=ValueAnimator.ofInt(startHeight,0);collapse.setDuration(180);collapse.setInterpolator(emphasized);collapse.addUpdateListener(animation->{ViewGroup.LayoutParams params=row.getLayoutParams();params.height=(int)animation.getAnimatedValue();row.setLayoutParams(params);});collapse.addListener(new AnimatorListenerAdapter(){@Override public void onAnimationEnd(Animator animation){removed.run();}});collapse.start();}).start();
     }
@@ -275,14 +276,14 @@ public class CoursePackActivity extends Activity {
     private void toggleItemCheck(Subject subject,String item,View row,View target,ImageView state,TextView itemLabel){
         LinkedHashMap<Subject,List<Entry>> grouped=groupBySubject(entriesFor(checklistDate.getDayOfWeek().getValue()-1));int beforeDone=countDoneItems(grouped);
         boolean checked=!isPacked(subject.id,item);setPacked(subject.id,item,checked);saveChecks();updateClearChecksButton();target.setContentDescription((checked?"取消勾选 ":"勾选 ")+item);setItemCheckVisual(state,checked);itemLabel.setTextColor(checked?muted:text);itemLabel.setPaintFlags(checked?itemLabel.getPaintFlags()|Paint.STRIKE_THRU_TEXT_FLAG:itemLabel.getPaintFlags()&~Paint.STRIKE_THRU_TEXT_FLAG);
-        if(checked)target.performHapticFeedback(HapticFeedbackConstants.CONFIRM);
+        vibrateTap(checked);
         if(motionEnabled()){state.setScaleX(.62f);state.setScaleY(.62f);state.setAlpha(.35f);state.animate().scaleX(1.16f).scaleY(1.16f).alpha(1).setDuration(140).setInterpolator(emphasized).withEndAction(()->state.animate().scaleX(1).scaleY(1).setDuration(170).setInterpolator(emphasized).start()).start();row.animate().scaleX(.985f).scaleY(.985f).setDuration(80).withEndAction(()->row.animate().scaleX(1).scaleY(1).setDuration(190).setInterpolator(emphasized).start()).start();}refreshTomorrowProgress(true);
         int afterDone=countDoneItems(grouped);if(checked&&tomorrowTotalItems>0&&tomorrowMissingSubjects==0&&beforeDone<tomorrowTotalItems&&afterDone==tomorrowTotalItems)root.postDelayed(this::showCompletionCelebration,260);
     }
 
     private void showCompletionCelebration(){
         if(completionOverlay!=null)return;
-        Vibrator vibrator=(Vibrator)getSystemService(VIBRATOR_SERVICE);if(vibrator!=null&&vibrator.hasVibrator())vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0,45,55,65,55,110},new int[]{0,90,0,150,0,220},-1));
+        Vibrator vibrator=deviceVibrator();if(vibrator!=null&&vibrator.hasVibrator())vibrator.vibrate(VibrationEffect.createWaveform(new long[]{0,55,55,90,55,140},new int[]{0,180,0,220,0,255},-1));
         FrameLayout overlay=new FrameLayout(this);completionOverlay=overlay;overlay.setClickable(true);overlay.setFocusable(true);overlay.setContentDescription("全部装好了");overlay.setBackgroundColor(dark?0xEE111318:0xEEDFE6FF);root.addView(overlay,new FrameLayout.LayoutParams(-1,-1));
         LinearLayout center=column();center.setGravity(Gravity.CENTER);ImageView badge=new ImageView(this);badge.setImageResource(R.drawable.ic_check);badge.setColorFilter(Color.WHITE);badge.setPadding(dp(28),dp(28),dp(28),dp(28));badge.setBackground(shape(success,64,0,0));center.addView(badge,lp(128,128));TextView title=label("书包收好啦",34,dark?Color.WHITE:0xFF17213B,true);title.setGravity(Gravity.CENTER);center.addView(title,margin(-2,-2,0,24,0,0));TextView copy=label("这次要带的物品已经全部装好",16,dark?0xFFDDE2F2:0xFF44506A,false);copy.setGravity(Gravity.CENTER);center.addView(copy,margin(-2,-2,0,8,0,0));overlay.addView(center,new FrameLayout.LayoutParams(-1,-2,Gravity.CENTER));
         int[] colors={primary,success,secondary,0xFFFFB95C,0xFFFF7A8A};for(int i=0;i<30;i++){View dot=new View(this);int size=dp(6+(i%4)*2);dot.setBackground(shape(colors[i%colors.length],size,0,0));FrameLayout.LayoutParams p=new FrameLayout.LayoutParams(size,size,Gravity.CENTER);overlay.addView(dot,p);double angle=Math.PI*2*i/30d;float distance=dp(150+(i%6)*34);dot.setAlpha(0f);dot.setScaleX(.3f);dot.setScaleY(.3f);if(motionEnabled())dot.animate().alpha(i%3==0?.35f:.9f).scaleX(1).scaleY(1).translationX((float)Math.cos(angle)*distance).translationY((float)Math.sin(angle)*distance).rotation(160+(i%5)*55).setStartDelay((i%8)*22L).setDuration(720).setInterpolator(emphasized).withEndAction(()->dot.animate().alpha(0).translationYBy(dp(40)).setDuration(420).start()).start();}
@@ -384,6 +385,8 @@ public class CoursePackActivity extends Activity {
     private void setPacked(String subjectId,String item,boolean packed){String key=packedKey(subjectId,item);String suffix=":"+subjectId+":"+b64(item.trim());checks.removeIf(saved->saved.equals(key)||saved.endsWith(suffix));if(packed)checks.add(key);}
     private void updateClearChecksButton(){if(clearChecksButton==null)return;boolean enabled=!checks.isEmpty();clearChecksButton.setEnabled(enabled);clearChecksButton.setAlpha(enabled?1f:.45f);clearChecksButton.setContentDescription(enabled?"清空已选择的物品":"当前没有已选择的物品");}
     private boolean motionEnabled(){try{return Settings.Global.getFloat(getContentResolver(),Settings.Global.ANIMATOR_DURATION_SCALE,1f)>0f;}catch(Exception ignored){return true;}}
+    private Vibrator deviceVibrator(){if(Build.VERSION.SDK_INT>=31){VibratorManager manager=(VibratorManager)getSystemService(VIBRATOR_MANAGER_SERVICE);return manager==null?null:manager.getDefaultVibrator();}return(Vibrator)getSystemService(VIBRATOR_SERVICE);}
+    private void vibrateTap(boolean strong){Vibrator vibrator=deviceVibrator();if(vibrator==null||!vibrator.hasVibrator())return;if(Build.VERSION.SDK_INT>=29)vibrator.vibrate(VibrationEffect.createPredefined(strong?VibrationEffect.EFFECT_CLICK:VibrationEffect.EFFECT_TICK));else vibrator.vibrate(VibrationEffect.createOneShot(strong?35:22,VibrationEffect.DEFAULT_AMPLITUDE));}
 
     private void loadData(){String subjectRaw=prefs.getString(KEY_SUBJECTS,"");String entryRaw=prefs.getString(KEY_ENTRIES,"");if(!subjectRaw.isEmpty()){for(String line:subjectRaw.split("\\n")){Subject subject=Subject.decode(line);if(subject!=null)subjects.add(subject);}for(String line:entryRaw.split("\\n")){Entry entry=Entry.decode(line);if(entry!=null)entries.add(entry);}}else migrateLegacyData();checks.addAll(prefs.getStringSet(KEY_CHECKS,new HashSet<>()));migratePackedChecks();}
     private void migratePackedChecks(){Set<String> migrated=new HashSet<>();LocalDate oldest=LocalDate.now().minusDays(1);for(String saved:checks){if(saved.startsWith("packed:")){migrated.add(saved);continue;}int split=saved.indexOf(':');if(split<=0)continue;try{LocalDate date=LocalDate.parse(saved.substring(0,split));if(!date.isBefore(oldest))migrated.add("packed:"+saved.substring(split+1));}catch(Exception ignored){}}if(!migrated.equals(checks)){checks.clear();checks.addAll(migrated);prefs.edit().putStringSet(KEY_CHECKS,new HashSet<>(checks)).apply();}}
