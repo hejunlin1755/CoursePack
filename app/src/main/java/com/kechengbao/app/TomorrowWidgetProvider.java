@@ -76,9 +76,9 @@ public class TomorrowWidgetProvider extends AppWidgetProvider {
         ZoneId zone = ZoneId.systemDefault();
         ZonedDateTime now = ZonedDateTime.now(zone);
         ZonedDateTime midnight = now.toLocalDate().plusDays(1).atStartOfDay(zone).plusSeconds(2);
-        ZonedDateTime evening = now.toLocalDate().atTime(18, 0).atZone(zone);
-        if (!evening.isAfter(now)) evening = evening.plusDays(1);
-        long triggerAt = (evening.isBefore(midnight) ? evening : midnight).toInstant().toEpochMilli();
+        ZonedDateTime boundary = now.toLocalDate().atTime(CoursePackActivity.PREPARATION_SWITCH_HOUR, 0).atZone(zone);
+        if (!boundary.isAfter(now)) boundary = boundary.plusDays(1);
+        long triggerAt = (boundary.isBefore(midnight) ? boundary : midnight).toInstant().toEpochMilli();
         Intent refresh = new Intent(context, TomorrowWidgetProvider.class).setAction(ACTION_MIDNIGHT_REFRESH);
         PendingIntent operation = PendingIntent.getBroadcast(context, 79, refresh, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, triggerAt, operation);
@@ -145,6 +145,8 @@ class WidgetData {
     static final String KEY_SUBJECTS = "subjects_v2";
     static final String KEY_ENTRIES = "entries_v2";
     static final String KEY_CHECKS = "item_checks_v2";
+    static final String KEY_DAILY_ITEMS = "daily_items_v1";
+    static final String KEY_DAILY_CHECKS = "daily_checks_v1";
 
     LocalDate date;
     final List<WidgetItem> items = new ArrayList<>();
@@ -158,9 +160,11 @@ class WidgetData {
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         List<CoursePackActivity.Subject> subjects = new ArrayList<>();
         List<CoursePackActivity.Entry> allEntries = new ArrayList<>();
+        List<CoursePackActivity.DailyItem> dailyItems = new ArrayList<>();
         String subjectRaw = prefs.getString(KEY_SUBJECTS, "");
         String entryRaw = prefs.getString(KEY_ENTRIES, "");
-        data.configured = !subjectRaw.isEmpty() && !entryRaw.isEmpty();
+        String dailyRaw = prefs.getString(KEY_DAILY_ITEMS, "");
+        data.configured = (!subjectRaw.isEmpty() && !entryRaw.isEmpty()) || !dailyRaw.isEmpty();
         if (!subjectRaw.isEmpty()) for (String line : subjectRaw.split("\\n")) {
             CoursePackActivity.Subject subject = CoursePackActivity.Subject.decode(line);
             if (subject != null) subjects.add(subject);
@@ -168,6 +172,10 @@ class WidgetData {
         if (!entryRaw.isEmpty()) for (String line : entryRaw.split("\\n")) {
             CoursePackActivity.Entry entry = CoursePackActivity.Entry.decode(line);
             if (entry != null) allEntries.add(entry);
+        }
+        if (!dailyRaw.isEmpty()) for (String line : dailyRaw.split("\\n")) {
+            CoursePackActivity.DailyItem item = CoursePackActivity.DailyItem.decode(line);
+            if (item != null) dailyItems.add(item);
         }
         data.date = resolveDate(allEntries);
         List<CoursePackActivity.Entry> entries = new ArrayList<>();
@@ -183,6 +191,7 @@ class WidgetData {
             }
         }
         Set<String> checks = prefs.getStringSet(KEY_CHECKS, new HashSet<>());
+        Set<String> dailyChecks = prefs.getStringSet(KEY_DAILY_CHECKS, new HashSet<>());
         for (CoursePackActivity.Subject subject : grouped.keySet()) {
             if (subject.noItems) continue;
             if (subject.items.isEmpty()) { data.missingSubjects++; continue; }
@@ -203,6 +212,12 @@ class WidgetData {
                 data.items.add(new WidgetItem(subject.name, item, key, checked));
                 if (checked) data.done++;
             }
+        }
+        for (CoursePackActivity.DailyItem item : dailyItems) if (item.permanent || data.date.equals(item.date)) {
+            String key = "daily:" + data.date + ":" + item.id;
+            boolean checked = dailyChecks.contains(key);
+            data.items.add(new WidgetItem(item.permanent ? "每日随身" : "临时随身", item.name, key, checked));
+            if (checked) data.done++;
         }
         return data;
     }
