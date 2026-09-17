@@ -38,6 +38,7 @@ Used on a phone at home, typically the evening before class. The supplied timeta
 - Directional screen and bottom-sheet transitions, while respecting the system animator-duration setting.
 - Chinese and English user interfaces, with system-language following or an explicit in-app override.
 - A full-screen settings surface for light/dark/system theme mode, accent palette, haptics, language, and a compact local-data overview.
+- JSON backup export and confirmed import through Android's system document picker, without storage permission.
 
 ## Brand Commitments
 

@@ -14,6 +14,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.VibrationEffect;
@@ -36,6 +37,12 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -62,6 +69,11 @@ public class CoursePackActivity extends Activity {
     private static final String KEY_DAILY_ITEMS = "daily_items_v1";
     private static final String KEY_DAILY_CHECKS = "daily_checks_v1";
     private static final String KEY_TIME_SLOT_PREFIX = "time_slot_v1_";
+    private static final String KEY_IMPORT_SUCCESS = "import_success_v1";
+    private static final int REQUEST_EXPORT_BACKUP = 601;
+    private static final int REQUEST_IMPORT_BACKUP = 602;
+    private static final int BACKUP_FORMAT_VERSION = 1;
+    private static final int MAX_BACKUP_BYTES = 2 * 1024 * 1024;
     private static final String[] DAYS = {"星期一", "星期二", "星期三", "星期四", "星期五"};
 
     private final List<Subject> subjects = new ArrayList<>();
@@ -80,6 +92,8 @@ public class CoursePackActivity extends Activity {
     private LinearLayout tomorrowProgressRow;
     private int selectedDay, selectedTab = 1, tomorrowTotalItems, tomorrowMissingSubjects;
     private int settingsReturnTab = 1;
+    private int settingsScrollY;
+    private boolean animateSettingsRestore;
     private LocalDate checklistDate;
     private int pageTransitionId;
     private int bg, surface, surfaceHigh, text, muted, primary, onPrimary, primaryContainer, onPrimaryContainer,
@@ -105,10 +119,17 @@ public class CoursePackActivity extends Activity {
         buildShell();
         int startTab = state == null ? 1 : state.getInt("selected_tab", 1);
         settingsReturnTab = state == null ? 1 : state.getInt("settings_return_tab", 1);
+        settingsScrollY = state == null ? 0 : state.getInt("settings_scroll_y", 0);
+        animateSettingsRestore = state != null && state.getBoolean("animate_settings_restore", false);
         if (startTab == 3) showSettings(false);
         else if (startTab == 0) showSchedule(false);
         else if (startTab == 2) showSubjects(false);
         else showTomorrow(false);
+        if(animateSettingsRestore&&motionEnabled()){contentHost.setAlpha(.15f);contentHost.setTranslationY(dp(14));contentHost.animate().alpha(1f).translationY(0).setDuration(260).setInterpolator(emphasized).start();animateSettingsRestore=false;}
+        if (prefs.getBoolean(KEY_IMPORT_SUCCESS, false)) {
+            prefs.edit().remove(KEY_IMPORT_SUCCESS).apply();
+            root.postDelayed(() -> showTransientMessage("备份已导入"), 260);
+        }
         if (android.os.Build.VERSION.SDK_INT >= 33) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT,
                     () -> { if (selectedTab == 3) returnFromSettings(true); else if (selectedTab != 1) showTomorrow(true); else finishAfterTransition(); });
@@ -118,6 +139,8 @@ public class CoursePackActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle outState) {
         outState.putInt("selected_tab", selectedTab);
         outState.putInt("settings_return_tab", settingsReturnTab);
+        outState.putInt("settings_scroll_y", settingsScrollY);
+        outState.putBoolean("animate_settings_restore", animateSettingsRestore);
         super.onSaveInstanceState(outState);
     }
 
@@ -222,7 +245,7 @@ public class CoursePackActivity extends Activity {
     private void showTomorrow(boolean animate) { if (selectedTab == 1 && animate) return; int old=selectedTab; selectedTab=1; swapPage(buildTomorrowPage(), old>1, animate); updateChrome(); }
     private void showSchedule(boolean animate) { if (selectedTab == 0 && animate) return; int old=selectedTab; selectedTab=0; swapPage(buildSchedulePage(), old>0, animate); updateChrome(); }
     private void showSubjects(boolean animate) { if (selectedTab == 2 && animate) return; int old=selectedTab; selectedTab=2; swapPage(buildSubjectsPage(), old>2, animate); updateChrome(); }
-    private void showSettings(boolean animate) { if (selectedTab == 3 && animate) return; if (selectedTab >= 0 && selectedTab <= 2) settingsReturnTab = selectedTab; selectedTab = 3; swapPage(buildSettingsPage(), false, animate); updateChrome(); }
+    private void showSettings(boolean animate) { if (selectedTab == 3 && animate) return; if (selectedTab >= 0 && selectedTab <= 2){settingsReturnTab = selectedTab;settingsScrollY=0;} selectedTab = 3; swapPage(buildSettingsPage(), false, animate); updateChrome(); }
     private void returnFromSettings(boolean animate) { if (settingsReturnTab == 0) showSchedule(animate); else if (settingsReturnTab == 2) showSubjects(animate); else showTomorrow(animate); }
 
     private void updateChrome() {
@@ -252,7 +275,7 @@ public class CoursePackActivity extends Activity {
     private void addPageHeader(LinearLayout page,String title,String subtitle,int bottomMargin){
         LinearLayout top=new LinearLayout(this);top.setOrientation(LinearLayout.HORIZONTAL);top.setGravity(Gravity.CENTER_VERTICAL);
         TextView heading=label(title,32,text,true);heading.setLetterSpacing(-.02f);top.addView(heading,new LinearLayout.LayoutParams(0,dp(52),1));
-        ImageView settings=settingsButton();top.addView(settings,lp(48,48));page.addView(top);
+        if(selectedTab==2){ImageView settings=settingsButton();top.addView(settings,lp(48,48));}page.addView(top);
         page.addView(label(subtitle,15,muted,false),margin(-1,-2,0,2,0,bottomMargin));
     }
 
@@ -267,21 +290,90 @@ public class CoursePackActivity extends Activity {
         LinearLayout overview=column();overview.setPadding(dp(20),dp(16),dp(20),dp(18));overview.setBackground(shape(primaryContainer,28,0,0));overview.addView(label("概览",13,onPrimaryContainer,true));overview.addView(label(subjects.size()+" 个科目 · "+entries.size()+" 节周课程",25,onPrimaryContainer,true),margin(-1,-2,0,8,0,0));overview.addView(label(itemCount+" 件携带物 · 正在准备 "+formatDate(target),14,onPrimaryContainer,false),margin(-1,-2,0,5,0,0));if(total>0){LinearLayout segments=new LinearLayout(this);segments.setOrientation(LinearLayout.HORIZONTAL);buildProgressSegments(segments,total,done);overview.addView(segments,margin(-1,10,0,16,0,0));overview.addView(label(done+" / "+total+" 已装好",13,onPrimaryContainer,true),margin(-1,-2,0,9,0,0));}page.addView(overview,margin(-1,-2,0,0,0,26));
 
         page.addView(settingsSectionTitle("外观"));
-        String theme=prefs.getString(AppText.KEY_THEME,"system");page.addView(settingsChoiceCard("主题模式",new String[]{"跟随系统","浅色","深色"},new String[]{"system","light","dark"},theme,value->{prefs.edit().putString(AppText.KEY_THEME,value).apply();recreate();}),margin(-1,-2,0,8,0,12));
-        String palette=prefs.getString(AppText.KEY_PALETTE,"dynamic");page.addView(settingsChoiceCard("强调色",new String[]{"系统动态色","紫罗兰","海洋蓝","森林绿"},new String[]{"dynamic","violet","ocean","forest"},palette,value->{prefs.edit().putString(AppText.KEY_PALETTE,value).apply();recreate();}),margin(-1,-2,0,0,0,24));
+        String theme=prefs.getString(AppText.KEY_THEME,"system");page.addView(settingsChoiceCard("主题模式",new String[]{"跟随系统","浅色","深色"},new String[]{"system","light","dark"},theme,value->applySettingAndRecreate(scroll,AppText.KEY_THEME,value)),margin(-1,-2,0,8,0,12));
+        String palette=prefs.getString(AppText.KEY_PALETTE,"dynamic");page.addView(settingsChoiceCard("强调色",new String[]{"系统动态色","紫罗兰","海洋蓝","森林绿"},new String[]{"dynamic","violet","ocean","forest"},palette,value->applySettingAndRecreate(scroll,AppText.KEY_PALETTE,value)),margin(-1,-2,0,0,0,24));
 
-        page.addView(settingsSectionTitle("语言"));String language=prefs.getString(AppText.KEY_LANGUAGE,"system");page.addView(settingsChoiceCard("应用语言",new String[]{"跟随系统","简体中文","English"},new String[]{"system","zh","en"},language,value->{prefs.edit().putString(AppText.KEY_LANGUAGE,value).apply();recreate();}),margin(-1,-2,0,0,0,24));
+        page.addView(settingsSectionTitle("语言"));String language=prefs.getString(AppText.KEY_LANGUAGE,"system");page.addView(settingsChoiceCard("应用语言",new String[]{"跟随系统","简体中文","English"},new String[]{"system","zh","en"},language,value->applySettingAndRecreate(scroll,AppText.KEY_LANGUAGE,value)),margin(-1,-2,0,0,0,24));
 
         page.addView(settingsSectionTitle("交互"));boolean[] haptics={prefs.getBoolean(AppText.KEY_HAPTICS,true)};LinearLayout hapticRow=toggleRow("触感反馈",haptics);hapticRow.setOnClickListener(v->{haptics[0]=!haptics[0];prefs.edit().putBoolean(AppText.KEY_HAPTICS,haptics[0]).apply();updateToggleRow(hapticRow,haptics[0]);if(haptics[0])vibrateTap(false);});page.addView(hapticRow,margin(-1,56,0,0,0,24));
 
-        page.addView(settingsSectionTitle("关于"));LinearLayout about=column();about.setPadding(dp(18),dp(14),dp(18),dp(14));about.setBackground(shape(surfaceHigh,20,0,0));about.addView(label("课程包 2.6.0",17,text,true));about.addView(label("数据仅保存在本机 · 无需联网",13,muted,false),margin(-1,-2,0,5,0,0));page.addView(about);scroll.addView(page);return scroll;
+        page.addView(settingsSectionTitle("数据"));page.addView(settingsDataCard(),margin(-1,-2,0,8,0,24));
+
+        page.addView(settingsSectionTitle("关于"));LinearLayout about=column();about.setPadding(dp(18),dp(14),dp(18),dp(14));about.setBackground(shape(surfaceHigh,20,0,0));about.addView(label("课程包 2.6.1",17,text,true));about.addView(label("数据仅保存在本机 · 无需联网",13,muted,false),margin(-1,-2,0,5,0,0));page.addView(about);scroll.addView(page);if(settingsScrollY>0)scroll.post(()->scroll.scrollTo(0,settingsScrollY));return scroll;
     }
+
+    private void applySettingAndRecreate(ScrollView scroll,String key,String value){if(value.equals(prefs.getString(key,"system")))return;settingsScrollY=scroll.getScrollY();animateSettingsRestore=true;prefs.edit().putString(key,value).apply();if(motionEnabled())contentHost.animate().alpha(.1f).translationY(dp(-10)).setDuration(150).setInterpolator(emphasized).withEndAction(this::recreate).start();else recreate();}
 
     private TextView settingsSectionTitle(String title){TextView view=label(title,20,text,true);return view;}
     private View settingsChoiceCard(String title,String[] labels,String[] values,String selected,StringPicked picked){
         LinearLayout card=column();card.setPadding(dp(8),dp(8),dp(8),dp(8));card.setBackground(shape(surfaceHigh,22,0,0));TextView heading=label(title,13,muted,true);heading.setPadding(dp(10),dp(5),dp(10),dp(8));card.addView(heading);
         for(int i=0;i<labels.length;i++){String value=values[i];boolean active=value.equals(selected);LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(12),0,dp(12),0);row.setBackground(ripple(active?primaryContainer:Color.TRANSPARENT,16));TextView name=label(labels[i],15,active?onPrimaryContainer:text,true);row.addView(name,new LinearLayout.LayoutParams(0,dp(52),1));ImageView state=new ImageView(this);setItemCheckVisual(state,active);row.addView(state,lp(28,28));row.setContentDescription(L(labels[i])+(active?T("，已选择",", selected"):""));row.setOnClickListener(v->picked.accept(value));row.setClickable(true);row.setFocusable(true);card.addView(row);}
         return card;
+    }
+
+    private View settingsDataCard(){
+        LinearLayout card=column();card.setPadding(dp(8),dp(6),dp(8),dp(6));card.setBackground(shape(surfaceHigh,22,0,0));
+        card.addView(settingsActionRow(R.drawable.ic_export,"导出备份","保存课程、携带物、打卡和设置",this::startBackupExport),lp(-1,68));
+        View divider=new View(this);divider.setBackgroundColor(outline);card.addView(divider,margin(-1,1,56,0,12,0));
+        card.addView(settingsActionRow(R.drawable.ic_import,"导入备份","从课程包备份文件恢复数据",this::startBackupImport),lp(-1,68));
+        return card;
+    }
+
+    private View settingsActionRow(int iconRes,String title,String subtitle,Runnable action){
+        LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(8),dp(4),dp(4),dp(4));row.setBackground(ripple(Color.TRANSPARENT,16));
+        ImageView icon=new ImageView(this);icon.setImageResource(iconRes);icon.setColorFilter(primary);icon.setPadding(dp(11),dp(11),dp(11),dp(11));icon.setBackground(shape(primaryContainer,15,0,0));row.addView(icon,lp(48,48));
+        LinearLayout copy=column();copy.addView(label(title,15,text,true));TextView detail=label(subtitle,12,muted,false);detail.setMaxLines(2);copy.addView(detail,margin(-1,-2,0,3,0,0));LinearLayout.LayoutParams copyParams=new LinearLayout.LayoutParams(0,-2,1);copyParams.setMargins(dp(12),0,0,0);row.addView(copy,copyParams);
+        ImageView arrow=iconButton(R.drawable.ic_chevron_right,title);arrow.setColorFilter(muted);row.addView(arrow,lp(40,48));row.setContentDescription(L(title)+"，"+L(subtitle));row.setClickable(true);row.setFocusable(true);row.setOnClickListener(v->{vibrateTap(false);action.run();});return row;
+    }
+
+    private void startBackupExport(){
+        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");intent.putExtra(Intent.EXTRA_TITLE,"CoursePack-backup-"+LocalDate.now()+".json");startActivityForResult(intent,REQUEST_EXPORT_BACKUP);
+    }
+
+    private void startBackupImport(){
+        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");startActivityForResult(intent,REQUEST_IMPORT_BACKUP);
+    }
+
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);if(resultCode!=RESULT_OK||data==null||data.getData()==null)return;Uri uri=data.getData();
+        if(requestCode==REQUEST_EXPORT_BACKUP)writeBackup(uri);else if(requestCode==REQUEST_IMPORT_BACKUP)readBackupForImport(uri);
+    }
+
+    private void writeBackup(Uri uri){
+        try(OutputStream stream=getContentResolver().openOutputStream(uri,"wt")){if(stream==null)throw new IllegalStateException("no output stream");byte[] bytes=createBackupJson().toString(2).getBytes(StandardCharsets.UTF_8);stream.write(bytes);stream.flush();showTransientMessage("备份已导出");}
+        catch(Exception error){showTransientMessage("导出失败，请换一个位置重试");}
+    }
+
+    private JSONObject createBackupJson() throws Exception{
+        JSONObject rootObject=new JSONObject();rootObject.put("format","coursepack-backup");rootObject.put("formatVersion",BACKUP_FORMAT_VERSION);rootObject.put("appVersion","2.6.1");rootObject.put("exportedAt",java.time.OffsetDateTime.now().toString());JSONObject data=new JSONObject();
+        for(Map.Entry<String,?> entry:prefs.getAll().entrySet()){if(KEY_IMPORT_SUCCESS.equals(entry.getKey()))continue;Object value=entry.getValue();JSONObject item=new JSONObject();if(value instanceof String){item.put("type","string");item.put("value",value);}else if(value instanceof Boolean){item.put("type","boolean");item.put("value",value);}else if(value instanceof Integer){item.put("type","integer");item.put("value",value);}else if(value instanceof Long){item.put("type","long");item.put("value",value);}else if(value instanceof Float){item.put("type","float");item.put("value",value);}else if(value instanceof Set){item.put("type","stringSet");JSONArray values=new JSONArray();for(Object member:(Set<?>)value)if(member instanceof String)values.put(member);item.put("value",values);}else continue;data.put(entry.getKey(),item);}
+        rootObject.put("data",data);return rootObject;
+    }
+
+    private void readBackupForImport(Uri uri){
+        try(InputStream stream=getContentResolver().openInputStream(uri)){if(stream==null)throw new IllegalStateException("no input stream");ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int read,total=0;while((read=stream.read(buffer))!=-1){total+=read;if(total>MAX_BACKUP_BYTES)throw new IllegalArgumentException("too large");bytes.write(buffer,0,read);}JSONObject backup=new JSONObject(bytes.toString(StandardCharsets.UTF_8.name()));validateBackup(backup);showImportConfirmation(backup);}
+        catch(Exception error){showTransientMessage("无法读取备份，请选择课程包导出的文件");}
+    }
+
+    private void validateBackup(JSONObject backup) throws Exception{
+        if(!"coursepack-backup".equals(backup.optString("format")))throw new IllegalArgumentException("format");int version=backup.optInt("formatVersion",-1);if(version<1||version>BACKUP_FORMAT_VERSION)throw new IllegalArgumentException("version");JSONObject data=backup.getJSONObject("data");if(data.length()>500)throw new IllegalArgumentException("too many keys");java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String key=keys.next();if(!isAllowedBackupKey(key))throw new IllegalArgumentException("key");JSONObject item=data.getJSONObject(key);String type=item.getString("type");if(!"string".equals(type)&&!"boolean".equals(type)&&!"integer".equals(type)&&!"long".equals(type)&&!"float".equals(type)&&!"stringSet".equals(type))throw new IllegalArgumentException("type");Object value=item.get("value");if("string".equals(type)&&(!(value instanceof String)||((String)value).length()>MAX_BACKUP_BYTES))throw new IllegalArgumentException("string");if("stringSet".equals(type)){JSONArray array=item.getJSONArray("value");if(array.length()>10000)throw new IllegalArgumentException("set");for(int i=0;i<array.length();i++)if(array.getString(i).length()>4096)throw new IllegalArgumentException("member");}}
+    }
+
+    private boolean isAllowedBackupKey(String key){return KEY_LEGACY_COURSES.equals(key)||KEY_SUBJECTS.equals(key)||KEY_ENTRIES.equals(key)||KEY_CHECKS.equals(key)||KEY_DAILY_ITEMS.equals(key)||KEY_DAILY_CHECKS.equals(key)||key.startsWith(KEY_TIME_SLOT_PREFIX)||key.startsWith("settings_");}
+
+    private void showImportConfirmation(JSONObject backup){
+        JSONObject data=backup.optJSONObject("data");String subjectsRaw=backupString(data,KEY_SUBJECTS);String entriesRaw=backupString(data,KEY_ENTRIES);int subjectCount=countBackupLines(subjectsRaw);int entryCount=countBackupLines(entriesRaw);Dialog dialog=bottomDialog();LinearLayout sheet=sheet("导入这份备份？","将替换当前设备上的课程、打卡和设置。备份包含 "+subjectCount+" 个科目、"+entryCount+" 节周课程。");LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);TextView cancel=button("取消",false);TextView confirm=button("确认导入",true);actions.addView(cancel,new LinearLayout.LayoutParams(0,dp(52),1));LinearLayout.LayoutParams confirmParams=new LinearLayout.LayoutParams(0,dp(52),1);confirmParams.setMargins(dp(12),0,0,0);actions.addView(confirm,confirmParams);sheet.addView(actions);cancel.setOnClickListener(v->dialog.dismiss());confirm.setOnClickListener(v->{try{applyBackup(backup);dialog.dismiss();}catch(Exception error){dialog.dismiss();showTransientMessage("导入失败，原有数据没有改变");}});showBottomDialog(dialog,sheet);
+    }
+
+    private String backupString(JSONObject data,String key){if(data==null)return"";JSONObject item=data.optJSONObject(key);return item==null?"":item.optString("value","");}
+    private int countBackupLines(String raw){if(raw==null||raw.isEmpty())return 0;return raw.split("\\n",-1).length;}
+
+    private void applyBackup(JSONObject backup) throws Exception{
+        JSONObject data=backup.getJSONObject("data");SharedPreferences.Editor editor=prefs.edit().clear();java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String key=keys.next();JSONObject item=data.getJSONObject(key);String type=item.getString("type");switch(type){case"string"->editor.putString(key,item.getString("value"));case"boolean"->editor.putBoolean(key,item.getBoolean("value"));case"integer"->editor.putInt(key,item.getInt("value"));case"long"->editor.putLong(key,item.getLong("value"));case"float"->editor.putFloat(key,(float)item.getDouble("value"));case"stringSet"->{JSONArray array=item.getJSONArray("value");Set<String> values=new HashSet<>();for(int i=0;i<array.length();i++)values.add(array.getString(i));editor.putStringSet(key,values);}}}editor.putBoolean(KEY_IMPORT_SUCCESS,true);if(!editor.commit())throw new IllegalStateException("commit");TomorrowWidgetProvider.refreshAll(this);recreate();
+    }
+
+    private void showTransientMessage(String message){
+        if(root==null)return;TextView banner=label(message,14,onPrimary,true);banner.setGravity(Gravity.CENTER);banner.setPadding(dp(18),0,dp(18),0);banner.setBackground(shape(primary,18,0,0));banner.setElevation(dp(8));FrameLayout.LayoutParams params=new FrameLayout.LayoutParams(-2,dp(52),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL);params.setMargins(dp(20),0,dp(20),dp(92));root.addView(banner,params);banner.setAlpha(0f);banner.setTranslationY(dp(18));banner.animate().alpha(1f).translationY(0).setDuration(motionEnabled()?220:0).setInterpolator(emphasized).start();banner.announceForAccessibility(L(message));banner.postDelayed(()->banner.animate().alpha(0f).translationY(dp(12)).setDuration(motionEnabled()?180:0).setInterpolator(emphasized).withEndAction(()->root.removeView(banner)).start(),2600);
     }
 
     private View buildTomorrowPage() {
@@ -466,7 +558,7 @@ public class CoursePackActivity extends Activity {
     private Dialog bottomDialog(){Dialog dialog=new Dialog(this);dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);return dialog;}
     private LinearLayout sheet(String title,String subtitle){LinearLayout sheet=column();sheet.setPadding(dp(24),dp(14),dp(24),dp(28));sheet.setBackground(shape(surface,30,0,0));TextView handle=new TextView(this);handle.setBackground(shape(muted,3,0,0));LinearLayout handleWrap=new LinearLayout(this);handleWrap.setGravity(Gravity.CENTER);handleWrap.addView(handle,lp(36,5));sheet.addView(handleWrap,margin(-1,22,0,0,0,12));sheet.addView(label(title,27,text,true));sheet.addView(label(subtitle,14,muted,false),margin(-1,-2,0,5,0,18));return sheet;}
     private void showBottomDialog(Dialog dialog,View content){showBottomDialog(dialog,content,-2);}
-    private void showBottomDialog(Dialog dialog,View content,int height){dialog.setContentView(content);Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setGravity(Gravity.BOTTOM);w.getDecorView().setPadding(0,0,0,0);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);WindowManager.LayoutParams p=w.getAttributes();p.width=WindowManager.LayoutParams.MATCH_PARENT;p.height=height;p.gravity=Gravity.BOTTOM;p.x=0;p.y=0;w.setAttributes(p);w.setLayout(WindowManager.LayoutParams.MATCH_PARENT,height);if(motionEnabled())w.setWindowAnimations(R.style.Animation_KeChengBao_Sheet);}dialog.show();}
+    private void showBottomDialog(Dialog dialog,View content,int height){dialog.setContentView(content);Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setGravity(Gravity.BOTTOM);w.getDecorView().setPadding(0,0,0,0);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);WindowManager.LayoutParams p=w.getAttributes();p.width=WindowManager.LayoutParams.MATCH_PARENT;p.height=height;p.gravity=Gravity.BOTTOM;p.x=0;p.y=0;w.setAttributes(p);w.setLayout(WindowManager.LayoutParams.MATCH_PARENT,height);}dialog.show();if(w!=null)w.setLayout(WindowManager.LayoutParams.MATCH_PARENT,height);if(motionEnabled()){content.setAlpha(.72f);content.setTranslationY(dp(72));content.post(()->content.animate().alpha(1f).translationY(0).setDuration(320).setInterpolator(emphasized).start());}}
     private EditText input(String hint,String value){EditText e=new EditText(this);e.setHint(L(hint));e.setText(value);e.setTextSize(16);e.setTextColor(text);e.setHintTextColor(muted);e.setSingleLine(true);e.setPadding(dp(16),0,dp(16),0);e.setBackground(ripple(surfaceHigh,15));return e;}
     private LinearLayout fieldGroup(String title,View field){LinearLayout group=column();group.addView(label(title,13,muted,true),margin(-1,-2,2,0,0,7));group.addView(field,lp(-1,54));return group;}
     private TextView button(String title,boolean filled){TextView b=label(title,15,filled?onPrimary:text,true);b.setGravity(Gravity.CENTER);b.setClickable(true);b.setFocusable(true);b.setBackground(ripple(filled?primary:surfaceHigh,18));return b;}
