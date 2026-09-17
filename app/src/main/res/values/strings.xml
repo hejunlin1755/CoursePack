@@ -2,4 +2,11 @@
 <resources>
     <string name="app_name">课程包</string>
     <string name="widget_description">查看明天的书包准备进度，点击进入课程包继续打卡</string>
+    <string name="widget_compact_name">紧凑 2×2</string>
+    <string name="widget_large_name">大号 4×2</string>
+    <string name="widget_today_bag">今日书包</string>
+    <string name="widget_tomorrow_bag">明日书包</string>
+    <string name="widget_all_packed">全部装好了</string>
+    <string name="widget_not_packed">未装</string>
+    <string name="widget_pending">还没装</string>
 </resources>

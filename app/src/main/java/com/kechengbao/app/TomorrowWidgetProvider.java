@@ -102,11 +102,11 @@ public class TomorrowWidgetProvider extends AppWidgetProvider {
                 large ? R.layout.widget_tomorrow_large : R.layout.widget_tomorrow_square);
         int total = data.items.size();
         boolean complete = total > 0 && data.done == total && data.missingSubjects == 0;
-        views.setTextViewText(R.id.widget_status, data.status());
-        views.setTextViewText(R.id.widget_progress, data.progress());
-        views.setTextViewText(R.id.widget_day_label, data.title());
+        views.setTextViewText(R.id.widget_status, AppText.translate(context, data.status()));
+        views.setTextViewText(R.id.widget_progress, AppText.translate(context, data.progress()));
+        views.setTextViewText(R.id.widget_day_label, AppText.translate(context, data.title()));
         views.setViewVisibility(R.id.widget_complete_icon, complete ? View.VISIBLE : View.GONE);
-        if (large) updateLargeDetail(views, data, complete);
+        if (large) updateLargeDetail(context, views, data, complete);
         int shown = Math.min(total, SEGMENTS.length);
         int completed = total <= SEGMENTS.length ? data.done : Math.round((data.done / (float) total) * SEGMENTS.length);
         views.setViewVisibility(R.id.widget_segments, total == 0 ? View.GONE : View.VISIBLE);
@@ -125,13 +125,14 @@ public class TomorrowWidgetProvider extends AppWidgetProvider {
         manager.updateAppWidget(id, views);
     }
 
-    private static void updateLargeDetail(RemoteViews views, WidgetData data, boolean complete) {
+    private static void updateLargeDetail(Context context, RemoteViews views, WidgetData data, boolean complete) {
         List<String> pending = data.pendingItems(3);
         boolean showList = !pending.isEmpty();
         views.setViewVisibility(R.id.widget_pending_list, showList ? View.VISIBLE : View.GONE);
         views.setViewVisibility(R.id.widget_detail_state, showList ? View.GONE : View.VISIBLE);
         views.setViewVisibility(R.id.widget_detail_complete_icon, complete ? View.VISIBLE : View.GONE);
-        views.setTextViewText(R.id.widget_detail_state_text, data.detail());
+        views.setTextViewText(R.id.widget_detail_state_text, AppText.translate(context, data.detail()));
+        views.setTextViewText(R.id.widget_pending_label, AppText.t(context, "还没装", "Still needed"));
         for (int i=0; i<PENDING_ROWS.length; i++) {
             boolean visible = i < pending.size();
             views.setViewVisibility(PENDING_ROWS[i], visible ? View.VISIBLE : View.GONE);

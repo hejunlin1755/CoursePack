@@ -23,7 +23,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:includeFontPadding="false"
-            android:text="今日书包"
+            android:text="@string/widget_today_bag"
             android:textSize="12sp"
             android:textStyle="bold"
             android:textColor="@color/widget_progress_text_secondary" />
@@ -36,7 +36,7 @@
             android:src="@drawable/ic_check"
             android:tint="@color/widget_progress_surface"
             android:background="@drawable/widget_complete_badge"
-            android:contentDescription="全部装好了"
+            android:contentDescription="@string/widget_all_packed"
             android:visibility="gone" />
     </LinearLayout>
 

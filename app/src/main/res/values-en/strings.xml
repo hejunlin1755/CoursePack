@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">CoursePack</string>
+    <string name="widget_description">See bag progress and open CoursePack to keep checking items</string>
+    <string name="widget_compact_name">Compact 2×2</string>
+    <string name="widget_large_name">Large 4×2</string>
+    <string name="widget_today_bag">Today’s bag</string>
+    <string name="widget_tomorrow_bag">Tomorrow’s bag</string>
+    <string name="widget_all_packed">All packed</string>
+    <string name="widget_not_packed">Not packed</string>
+    <string name="widget_pending">Still needed</string>
+</resources>

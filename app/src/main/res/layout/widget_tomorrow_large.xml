@@ -30,7 +30,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:includeFontPadding="false"
-                android:text="明日书包"
+                android:text="@string/widget_tomorrow_bag"
                 android:textSize="12sp"
                 android:textStyle="bold"
                 android:textColor="@color/widget_progress_text_secondary" />
@@ -43,7 +43,7 @@
                 android:src="@drawable/ic_check"
                 android:tint="@color/widget_progress_surface"
                 android:background="@drawable/widget_complete_badge"
-                android:contentDescription="全部装好了"
+                android:contentDescription="@string/widget_all_packed"
                 android:visibility="gone" />
         </LinearLayout>
 
@@ -99,25 +99,26 @@
             android:orientation="vertical">
 
             <TextView
+                android:id="@+id/widget_pending_label"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="3dp"
                 android:includeFontPadding="false"
-                android:text="还没装"
+                android:text="@string/widget_pending"
                 android:textSize="10sp"
                 android:textStyle="bold"
                 android:textColor="@color/widget_progress_text_secondary" />
 
             <LinearLayout android:id="@+id/widget_pending_row_1" android:layout_width="match_parent" android:layout_height="25dp" android:orientation="horizontal" android:gravity="center_vertical">
-                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" android:contentDescription="未装" />
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" android:contentDescription="@string/widget_not_packed" />
                 <TextView android:id="@+id/widget_pending_1" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="7dp" android:includeFontPadding="false" android:textSize="12sp" android:textColor="@color/widget_progress_text" android:maxLines="1" android:ellipsize="end" />
             </LinearLayout>
             <LinearLayout android:id="@+id/widget_pending_row_2" android:layout_width="match_parent" android:layout_height="25dp" android:orientation="horizontal" android:gravity="center_vertical">
-                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" android:contentDescription="未装" />
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" android:contentDescription="@string/widget_not_packed" />
                 <TextView android:id="@+id/widget_pending_2" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="7dp" android:includeFontPadding="false" android:textSize="12sp" android:textColor="@color/widget_progress_text" android:maxLines="1" android:ellipsize="end" />
             </LinearLayout>
             <LinearLayout android:id="@+id/widget_pending_row_3" android:layout_width="match_parent" android:layout_height="25dp" android:orientation="horizontal" android:gravity="center_vertical">
-                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" android:contentDescription="未装" />
+                <ImageView android:layout_width="18dp" android:layout_height="18dp" android:src="@drawable/ic_widget_unchecked_light" android:contentDescription="@string/widget_not_packed" />
                 <TextView android:id="@+id/widget_pending_3" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="7dp" android:includeFontPadding="false" android:textSize="12sp" android:textColor="@color/widget_progress_text" android:maxLines="1" android:ellipsize="end" />
             </LinearLayout>
         </LinearLayout>
@@ -136,7 +137,7 @@
                 android:src="@drawable/ic_check"
                 android:tint="@color/widget_progress_surface"
                 android:background="@drawable/widget_complete_badge"
-                android:contentDescription="全部完成"
+                android:contentDescription="@string/widget_all_packed"
                 android:visibility="gone" />
             <TextView
                 android:id="@+id/widget_detail_state_text"
