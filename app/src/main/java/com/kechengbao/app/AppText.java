@@ -81,7 +81,7 @@ final class AppText {
             case "导入失败，原有数据没有改变" -> "Import failed. Your existing data was not changed";
             case "备份已导入" -> "Backup imported";
             case "关于" -> "About";
-            case "课程包 2.6.1" -> "CoursePack 2.6.1";
+            case "课程包 2.7.0" -> "CoursePack 2.7.0";
             case "数据仅保存在本机 · 无需联网" -> "Stored only on this device · Works offline";
             case "排一节课" -> "Add lesson";
             case "新建科目" -> "New subject";
@@ -145,6 +145,24 @@ final class AppText {
             case "本周课表" -> "Weekly schedule";
             case "课表只安排科目，携带物统一在科目库管理" -> "Schedule subjects here; manage carry items in Subjects";
             case "批量设置节次时间" -> "Set lesson times in bulk";
+            case "批量导入课表" -> "Import schedule";
+            case "设置节次时间" -> "Set lesson times";
+            case "粘贴文字批量导入课程表" -> "Paste text to import a schedule";
+            case "可以批量导入，也可以点“排一节课”手动添加。" -> "Import a schedule or tap Add lesson to add one manually.";
+            case "粘贴课程文字，先预览再导入；支持按星期分行或从表格、OCR 复制的内容" -> "Paste schedule text, preview it, then import. Supports weekday lines and text copied from tables or OCR";
+            case "课程文字" -> "Schedule text";
+            case "从相册文字识别、聊天或表格复制后粘贴到这里" -> "Paste text copied from photo recognition, chat, or a table";
+            case "空、无课、- 会保留节次但不创建课程；每星期最多识别 12 节" -> "Empty, none, and - keep the period empty. Up to 12 periods per weekday";
+            case "生成导入预览" -> "Preview import";
+            case "没有识别到课程，请按示例加入星期和科目" -> "No lessons found. Add weekdays and subjects as shown in the example";
+            case "检查导入预览" -> "Review import";
+            case "确认星期、节次和科目；默认跳过已经排课的位置" -> "Check weekdays, periods, and subjects. Existing slots are skipped by default";
+            case "替换相同星期和节次的课程" -> "Replace lessons in matching slots";
+            case "关闭时会安全跳过冲突，不会覆盖现有课程" -> "When off, conflicts are skipped and existing lessons stay unchanged";
+            case "将导入" -> "Will import";
+            case "已有课程 · 将替换" -> "Existing lesson · Will replace";
+            case "已有课程 · 将跳过" -> "Existing lesson · Will skip";
+            case "没有可导入的课程" -> "No lessons to import";
             case "批量设置星期一到星期五的节次时间" -> "Set lesson times for multiple weekdays";
             case "这天没有课" -> "No lessons this day";
             case "点“排一节课”，从科目库选择科目。" -> "Tap Add lesson and choose a subject.";
@@ -242,6 +260,10 @@ final class AppText {
         if ((m = Pattern.compile("^第 ?(\\d+)节(?:  )?(.*)$").matcher(raw)).matches())
             return "Period " + m.group(1) + (m.group(2).isEmpty() ? "" : "  " + m.group(2));
         if ((m = Pattern.compile("^(\\d+) 节课$").matcher(raw)).matches()) return m.group(1) + " lessons";
+        if ((m = Pattern.compile("^(\\d+) 节课将导入 · (\\d+) 个新科目$").matcher(raw)).matches())
+            return m.group(1) + " lessons will import · " + m.group(2) + " new subjects";
+        if ((m = Pattern.compile("^ · (\\d+) 处内容已忽略$").matcher(raw)).matches()) return " · " + m.group(1) + " items ignored";
+        if ((m = Pattern.compile("^确认导入 (\\d+) 节课$").matcher(raw)).matches()) return "Import " + m.group(1) + " lessons";
         if ((m = Pattern.compile("^(\\d+) 件$").matcher(raw)).matches()) return m.group(1) + " items";
         if ((m = Pattern.compile("^(\\d+) 个科目 · (\\d+) 节周课程$").matcher(raw)).matches())
             return m.group(1) + " subjects · " + m.group(2) + " weekly lessons";
