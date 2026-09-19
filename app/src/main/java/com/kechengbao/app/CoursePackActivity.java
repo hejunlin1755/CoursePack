@@ -77,9 +77,13 @@ public class CoursePackActivity extends Activity {
     private static final String KEY_DAILY_CHECKS = "daily_checks_v1";
     private static final String KEY_TIME_SLOT_PREFIX = "time_slot_v1_";
     private static final String KEY_IMPORT_SUCCESS = "import_success_v1";
+    private static final String KEY_ONBOARDING_DONE = "settings_onboarding_done_v1";
+    private static final String KEY_WHATS_NEW_VERSION = "settings_whats_new_version_v1";
+    private static final int CURRENT_VERSION_CODE = 31;
     private static final int REQUEST_EXPORT_BACKUP = 601;
     private static final int REQUEST_IMPORT_BACKUP = 602;
     private static final int REQUEST_SCHEDULE_IMAGE = 603;
+    private static final int REQUEST_NOTIFICATION_PERMISSION = 604;
     private static final int BACKUP_FORMAT_VERSION = 1;
     private static final int MAX_BACKUP_BYTES = 2 * 1024 * 1024;
     private static final String[] DAYS = {"星期一", "星期二", "星期三", "星期四", "星期五"};
@@ -96,6 +100,12 @@ public class CoursePackActivity extends Activity {
     private SharedPreferences prefs;
     private FrameLayout root, contentHost;
     private View completionOverlay;
+    private FrameLayout onboardingOverlay, onboardingStage;
+    private LinearLayout onboardingDots, reminderToggleRow;
+    private TextView onboardingNext, onboardingBack, onboardingStepLabel;
+    private View reminderTimeRow;
+    private int onboardingStep;
+    private boolean pendingReminderEnable, onboardingLaunchedFromSettings;
     private TextView fab, tomorrowStatus, tomorrowProgressLabel, clearChecksButton;
     private Dialog scheduleImportDialog;
     private EditText scheduleImportInput;
@@ -120,6 +130,7 @@ public class CoursePackActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        boolean freshInstall = prefs.getAll().isEmpty();
         english = AppText.isEnglish(this);
         String themeMode = prefs.getString(AppText.KEY_THEME, "system");
         boolean systemDark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
@@ -142,9 +153,11 @@ public class CoursePackActivity extends Activity {
             prefs.edit().remove(KEY_IMPORT_SUCCESS).apply();
             root.postDelayed(() -> showTransientMessage("备份已导入"), 260);
         }
+        PackingReminderReceiver.schedule(this);
+        if(state==null){if(freshInstall&&!prefs.getBoolean(KEY_ONBOARDING_DONE,false))root.postDelayed(this::showFirstRun,220);else if(prefs.getInt(KEY_WHATS_NEW_VERSION,0)<CURRENT_VERSION_CODE)root.postDelayed(this::showWhatsNew,260);}
         if (android.os.Build.VERSION.SDK_INT >= 33) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT,
-                    () -> { if (selectedTab == 3) returnFromSettings(true); else if (selectedTab != 1) showTomorrow(true); else finishAfterTransition(); });
+                    () -> { if(onboardingOverlay!=null){handleOnboardingBack();return;}if (selectedTab == 3) returnFromSettings(true); else if (selectedTab != 1) showTomorrow(true); else finishAfterTransition(); });
         }
     }
 
@@ -158,6 +171,7 @@ public class CoursePackActivity extends Activity {
 
     @Override public void onBackPressed() {
         if (android.os.Build.VERSION.SDK_INT < 33) {
+            if(onboardingOverlay!=null){handleOnboardingBack();return;}
             if (selectedTab == 3) returnFromSettings(true);
             else if (selectedTab != 1) showTomorrow(true); else super.onBackPressed();
         }
@@ -307,12 +321,44 @@ public class CoursePackActivity extends Activity {
 
         page.addView(settingsSectionTitle("语言"));String language=prefs.getString(AppText.KEY_LANGUAGE,"system");page.addView(settingsChoiceCard("应用语言",new String[]{"跟随系统","简体中文","English"},new String[]{"system","zh","en"},language,value->applySettingAndRecreate(scroll,AppText.KEY_LANGUAGE,value)),margin(-1,-2,0,0,0,24));
 
-        page.addView(settingsSectionTitle("交互"));boolean[] haptics={prefs.getBoolean(AppText.KEY_HAPTICS,true)};LinearLayout hapticRow=toggleRow("触感反馈",haptics);hapticRow.setOnClickListener(v->{haptics[0]=!haptics[0];prefs.edit().putBoolean(AppText.KEY_HAPTICS,haptics[0]).apply();updateToggleRow(hapticRow,haptics[0]);if(haptics[0])vibrateTap(false);});page.addView(hapticRow,margin(-1,56,0,0,0,24));
+        page.addView(settingsSectionTitle("交互"));boolean[] haptics={prefs.getBoolean(AppText.KEY_HAPTICS,true)};LinearLayout hapticRow=toggleRow("触感反馈",haptics);hapticRow.setOnClickListener(v->{haptics[0]=!haptics[0];prefs.edit().putBoolean(AppText.KEY_HAPTICS,haptics[0]).apply();updateToggleRow(hapticRow,haptics[0]);if(haptics[0])vibrateTap(false);});page.addView(hapticRow,margin(-1,56,0,0,0,10));page.addView(reminderSettingsCard(),margin(-1,-2,0,0,0,24));
 
         page.addView(settingsSectionTitle("数据"));page.addView(settingsDataCard(),margin(-1,-2,0,8,0,24));
 
-        page.addView(settingsSectionTitle("关于"));LinearLayout about=column();about.setPadding(dp(18),dp(14),dp(18),dp(14));about.setBackground(shape(surfaceHigh,20,0,0));about.addView(label("课程包 2.8.0",17,text,true));about.addView(label("数据仅保存在本机 · 无需联网",13,muted,false),margin(-1,-2,0,5,0,0));page.addView(about);scroll.addView(page);if(settingsScrollY>0)scroll.post(()->scroll.scrollTo(0,settingsScrollY));return scroll;
+        page.addView(settingsSectionTitle("关于"));LinearLayout about=column();about.setPadding(dp(8),dp(8),dp(8),dp(8));about.setBackground(shape(surfaceHigh,20,0,0));LinearLayout version=column();version.setPadding(dp(10),dp(7),dp(10),dp(10));version.addView(label("课程包 2.9.0",17,text,true));version.addView(label("数据仅保存在本机 · 无需联网",13,muted,false),margin(-1,-2,0,5,0,0));about.addView(version);about.addView(settingsActionRow(R.drawable.ic_today,"版本更新","查看 2.9.0 的新功能",this::showWhatsNew),lp(-1,68));about.addView(settingsActionRow(R.drawable.ic_subjects,"使用引导","重新查看第一次使用流程",this::showFirstRun),lp(-1,68));page.addView(about);scroll.addView(page);if(settingsScrollY>0)scroll.post(()->scroll.scrollTo(0,settingsScrollY));return scroll;
     }
+
+    private View reminderSettingsCard(){
+        boolean enabled=prefs.getBoolean(AppText.KEY_REMINDER_ENABLED,false);LinearLayout card=column();card.setPadding(dp(8),dp(6),dp(8),dp(6));card.setBackground(shape(surfaceHigh,22,0,0));boolean[] state={enabled};LinearLayout toggle=toggleRow("书包提醒",state);reminderToggleRow=toggle;card.addView(toggle,lp(-1,56));View divider=new View(this);divider.setBackgroundColor(outline);card.addView(divider,margin(-1,1,56,0,12,0));View time=reminderTimeAction();reminderTimeRow=time;card.addView(time,lp(-1,68));toggle.setOnClickListener(v->{boolean next=!prefs.getBoolean(AppText.KEY_REMINDER_ENABLED,false);if(next&&Build.VERSION.SDK_INT>=33&&checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)!=android.content.pm.PackageManager.PERMISSION_GRANTED){pendingReminderEnable=true;requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},REQUEST_NOTIFICATION_PERMISSION);return;}setReminderEnabled(next);});updateReminderUi(enabled);return card;
+    }
+
+    private View reminderTimeAction(){
+        LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(8),dp(4),dp(4),dp(4));row.setBackground(ripple(Color.TRANSPARENT,16));ImageView icon=new ImageView(this);icon.setImageResource(R.drawable.ic_today);icon.setColorFilter(primary);icon.setPadding(dp(11),dp(11),dp(11),dp(11));icon.setBackground(shape(primaryContainer,15,0,0));row.addView(icon,lp(48,48));LinearLayout copy=column();copy.addView(label("提醒时间",15,text,true));TextView detail=label(reminderTimeText(),12,muted,false);copy.addView(detail,margin(-1,-2,0,3,0,0));LinearLayout.LayoutParams copyParams=new LinearLayout.LayoutParams(0,-2,1);copyParams.setMargins(dp(12),0,0,0);row.addView(copy,copyParams);ImageView arrow=iconButton(R.drawable.ic_chevron_right,"调整提醒时间");arrow.setColorFilter(muted);row.addView(arrow,lp(40,48));row.setOnClickListener(v->{int hour=prefs.getInt(AppText.KEY_REMINDER_HOUR,20),minute=prefs.getInt(AppText.KEY_REMINDER_MINUTE,0);new android.app.TimePickerDialog(this,(picker,newHour,newMinute)->{prefs.edit().putInt(AppText.KEY_REMINDER_HOUR,newHour).putInt(AppText.KEY_REMINDER_MINUTE,newMinute).apply();detail.setText(String.format(Locale.getDefault(),"%02d:%02d",newHour,newMinute)+T(" · 未完成时通知"," · Only when unfinished"));PackingReminderReceiver.schedule(this);showTransientMessage(T("提醒时间已改为 ","Reminder set to ")+String.format(Locale.getDefault(),"%02d:%02d",newHour,newMinute));},hour,minute,true).show();});arrow.setOnClickListener(v->row.performClick());row.setClickable(true);return row;
+    }
+
+    private String reminderTimeText(){return String.format(Locale.getDefault(),"%02d:%02d",prefs.getInt(AppText.KEY_REMINDER_HOUR,20),prefs.getInt(AppText.KEY_REMINDER_MINUTE,0))+T(" · 未完成时通知"," · Only when unfinished");}
+    private void setReminderEnabled(boolean enabled){prefs.edit().putBoolean(AppText.KEY_REMINDER_ENABLED,enabled).apply();if(enabled)PackingReminderReceiver.schedule(this);else PackingReminderReceiver.cancel(this);updateReminderUi(enabled);showTransientMessage(T(enabled?"书包提醒已开启":"书包提醒已关闭",enabled?"Packing reminder enabled":"Packing reminder disabled"));}
+    private void updateReminderUi(boolean enabled){if(reminderToggleRow!=null)updateToggleRow(reminderToggleRow,enabled);if(reminderTimeRow!=null){setEnabledTree(reminderTimeRow,enabled);reminderTimeRow.setAlpha(enabled?1f:.42f);}}
+    private void setEnabledTree(View view,boolean enabled){view.setEnabled(enabled);if(view instanceof ViewGroup group)for(int i=0;i<group.getChildCount();i++)setEnabledTree(group.getChildAt(i),enabled);}
+
+    @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode!=REQUEST_NOTIFICATION_PERMISSION||!pendingReminderEnable)return;pendingReminderEnable=false;if(grantResults.length>0&&grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)setReminderEnabled(true);else showTransientMessage(T("没有通知权限，书包提醒未开启","Notification permission denied; reminder stays off"));}
+
+    private void showFirstRun(){
+        if(onboardingOverlay!=null)return;onboardingLaunchedFromSettings=selectedTab==3;onboardingStep=0;FrameLayout overlay=new FrameLayout(this);onboardingOverlay=overlay;overlay.setBackgroundColor(bg);overlay.setClickable(true);overlay.setFocusable(true);LinearLayout shell=column();shell.setPadding(dp(20),dp(18),dp(20),dp(18));LinearLayout top=new LinearLayout(this);top.setOrientation(LinearLayout.HORIZONTAL);top.setGravity(Gravity.CENTER_VERTICAL);top.addView(label("课程包",18,text,true),new LinearLayout.LayoutParams(0,dp(48),1));TextView stepLabel=label("1 / 3",14,muted,true);onboardingStepLabel=stepLabel;stepLabel.setGravity(Gravity.CENTER);top.addView(stepLabel,lp(64,48));shell.addView(top);FrameLayout stage=new FrameLayout(this);onboardingStage=stage;shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));LinearLayout dots=new LinearLayout(this);onboardingDots=dots;dots.setGravity(Gravity.CENTER);dots.setOrientation(LinearLayout.HORIZONTAL);shell.addView(dots,lp(-1,28));LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);TextView back=button("稍后设置",false);onboardingBack=back;TextView next=button("下一步",true);onboardingNext=next;actions.addView(back,new LinearLayout.LayoutParams(0,dp(54),1));LinearLayout.LayoutParams nextParams=new LinearLayout.LayoutParams(0,dp(54),1);nextParams.setMargins(dp(12),0,0,0);actions.addView(next,nextParams);shell.addView(actions);overlay.addView(shell,new FrameLayout.LayoutParams(-1,-1));back.setOnClickListener(v->{if(onboardingStep==0)finishOnboarding(false);else{onboardingStep--;renderOnboardingStep(false);}});next.setOnClickListener(v->{if(onboardingStep==2)finishOnboarding(true);else{onboardingStep++;renderOnboardingStep(true);}});root.addView(overlay,new FrameLayout.LayoutParams(-1,-1));if(motionEnabled()){overlay.setAlpha(0);overlay.animate().alpha(1).setDuration(180).start();}renderOnboardingStep(true);
+    }
+
+    private void renderOnboardingStep(boolean forward){
+        if(onboardingStage==null)return;String[] titles={T("把明天的书包一次收好","Pack tomorrow's bag in one go"),T("把课表交给课程包","Bring in your timetable"),T("照着清单逐件打卡","Check items off one by one")};String[] bodies={T("课程、课本和用品放在同一份清单里。晚上打开就知道还差什么。","Courses, books, and supplies stay in one checklist, so you always know what is left."),T("拍下课程表离线识别，或手动排课。导入前可以检查和修改。","Recognize a timetable photo offline or add lessons manually. Review everything before importing."),T("每个科目只设置一次携带物。以后按当天清单整理，完成时会明确告诉你。","Set carry items once per subject, then pack from the daily checklist and get a clear finish state.")};int[] icons={R.mipmap.ic_launcher,R.drawable.ic_calendar,R.drawable.ic_subjects};LinearLayout page=column();page.setGravity(Gravity.CENTER_HORIZONTAL);page.setPadding(dp(10),dp(32),dp(10),dp(20));ImageView art=new ImageView(this);art.setImageResource(icons[onboardingStep]);if(onboardingStep>0){art.setColorFilter(onPrimaryContainer);art.setPadding(dp(28),dp(28),dp(28),dp(28));art.setBackground(shape(primaryContainer,36,0,0));}page.addView(art,lp(132,132));TextView titleView=label(titles[onboardingStep],32,text,true);titleView.setGravity(Gravity.CENTER);titleView.setLetterSpacing(-.02f);page.addView(titleView,margin(-1,-2,0,30,0,0));TextView body=label(bodies[onboardingStep],16,muted,false);body.setGravity(Gravity.CENTER);body.setLineSpacing(dp(3),1f);page.addView(body,margin(-1,-2,8,14,8,0));ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(page);View previous=onboardingStage.getChildCount()==0?null:onboardingStage.getChildAt(onboardingStage.getChildCount()-1);onboardingStage.addView(scroll,new FrameLayout.LayoutParams(-1,-1));if(previous!=null){previous.animate().cancel();if(motionEnabled()){scroll.setAlpha(.15f);scroll.setTranslationX(dp(forward?56:-56));scroll.animate().alpha(1).translationX(0).setDuration(280).setInterpolator(emphasized).start();previous.animate().alpha(0).translationX(dp(forward?-34:34)).setDuration(180).setInterpolator(emphasized).withEndAction(()->{if(previous.getParent()==onboardingStage)onboardingStage.removeView(previous);}).start();}else onboardingStage.removeView(previous);}onboardingDots.removeAllViews();for(int i=0;i<3;i++){View dot=new View(this);dot.setBackground(shape(i==onboardingStep?primary:secondary,5,0,0));LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(dp(i==onboardingStep?24:8),dp(8));if(i>0)params.setMargins(dp(7),0,0,0);onboardingDots.addView(dot,params);}if(onboardingStepLabel!=null)onboardingStepLabel.setText((onboardingStep+1)+" / 3");onboardingBack.setText(L(onboardingStep==0?"稍后设置":"上一步"));onboardingNext.setText(L(onboardingStep==2?"导入课表":"下一步"));
+    }
+
+    private void handleOnboardingBack(){if(onboardingStep>0){onboardingStep--;renderOnboardingStep(false);}else if(onboardingLaunchedFromSettings)finishOnboarding(false);else finishAfterTransition();}
+    private void finishOnboarding(boolean importNow){prefs.edit().putBoolean(KEY_ONBOARDING_DONE,true).putInt(KEY_WHATS_NEW_VERSION,CURRENT_VERSION_CODE).apply();FrameLayout overlay=onboardingOverlay;if(overlay==null)return;Runnable remove=()->{if(overlay.getParent()==root)root.removeView(overlay);onboardingOverlay=null;onboardingStage=null;onboardingDots=null;onboardingNext=null;onboardingBack=null;onboardingStepLabel=null;if(importNow){showSchedule(true);root.postDelayed(this::showScheduleTextImport,240);}};if(motionEnabled())overlay.animate().alpha(0).translationY(dp(28)).setDuration(220).setInterpolator(emphasized).withEndAction(remove).start();else remove.run();}
+
+    private void showWhatsNew(){
+        prefs.edit().putInt(KEY_WHATS_NEW_VERSION,CURRENT_VERSION_CODE).apply();Dialog dialog=bottomDialog();LinearLayout content=sheet("2.9.0 更新","只展示这次可以直接用到的新功能");TextView badge=label("2.9.0",13,onPrimaryContainer,true);badge.setGravity(Gravity.CENTER);badge.setBackground(shape(primaryContainer,16,0,0));content.addView(badge,lp(78,34));LinearLayout list=column();list.setPadding(dp(8),dp(6),dp(8),dp(6));list.setBackground(shape(surfaceHigh,22,0,0));list.addView(whatsNewFeature(R.drawable.ic_notification,"按时整理书包","设定提醒时间；只有清单尚未完成时才会通知。"));list.addView(whatsNewFeature(R.drawable.ic_calendar,"第一次使用更清楚","三步完成导入课表、设置携带物和开始打卡。"));list.addView(whatsNewFeature(R.drawable.ic_subjects,"随时重新查看引导","可从设置的“关于”区域再次打开，不会强制重复出现。"));content.addView(list,margin(-1,-2,0,14,0,16));TextView done=button("知道了",true);done.setOnClickListener(v->dialog.dismiss());content.addView(done,lp(-1,52));ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(content);showBottomDialog(dialog,scroll,(int)(getResources().getDisplayMetrics().heightPixels*.82f));
+    }
+
+    private View whatsNewFeature(int iconRes,String title,String detail){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(8),dp(8),dp(8),dp(8));ImageView icon=new ImageView(this);icon.setImageResource(iconRes);icon.setColorFilter(onPrimaryContainer);icon.setPadding(dp(11),dp(11),dp(11),dp(11));icon.setBackground(shape(primaryContainer,16,0,0));row.addView(icon,lp(50,50));LinearLayout copy=column();copy.addView(label(title,16,text,true));TextView body=label(detail,13,muted,false);body.setMaxLines(3);copy.addView(body,margin(-1,-2,0,3,0,0));LinearLayout.LayoutParams copyParams=new LinearLayout.LayoutParams(0,-2,1);copyParams.setMargins(dp(13),0,0,0);row.addView(copy,copyParams);return row;}
 
     private void applySettingAndRecreate(ScrollView scroll,String key,String value){if(value.equals(prefs.getString(key,"system")))return;settingsScrollY=scroll.getScrollY();animateSettingsRestore=true;prefs.edit().putString(key,value).apply();if(motionEnabled())contentHost.animate().alpha(.1f).translationY(dp(-10)).setDuration(150).setInterpolator(emphasized).withEndAction(this::recreate).start();else recreate();}
 
@@ -357,7 +403,7 @@ public class CoursePackActivity extends Activity {
     }
 
     private JSONObject createBackupJson() throws Exception{
-        JSONObject rootObject=new JSONObject();rootObject.put("format","coursepack-backup");rootObject.put("formatVersion",BACKUP_FORMAT_VERSION);rootObject.put("appVersion","2.8.0");rootObject.put("exportedAt",java.time.OffsetDateTime.now().toString());JSONObject data=new JSONObject();
+        JSONObject rootObject=new JSONObject();rootObject.put("format","coursepack-backup");rootObject.put("formatVersion",BACKUP_FORMAT_VERSION);rootObject.put("appVersion","2.9.0");rootObject.put("exportedAt",java.time.OffsetDateTime.now().toString());JSONObject data=new JSONObject();
         for(Map.Entry<String,?> entry:prefs.getAll().entrySet()){if(KEY_IMPORT_SUCCESS.equals(entry.getKey()))continue;Object value=entry.getValue();JSONObject item=new JSONObject();if(value instanceof String){item.put("type","string");item.put("value",value);}else if(value instanceof Boolean){item.put("type","boolean");item.put("value",value);}else if(value instanceof Integer){item.put("type","integer");item.put("value",value);}else if(value instanceof Long){item.put("type","long");item.put("value",value);}else if(value instanceof Float){item.put("type","float");item.put("value",value);}else if(value instanceof Set){item.put("type","stringSet");JSONArray values=new JSONArray();for(Object member:(Set<?>)value)if(member instanceof String)values.put(member);item.put("value",values);}else continue;data.put(entry.getKey(),item);}
         rootObject.put("data",data);return rootObject;
     }
@@ -381,7 +427,7 @@ public class CoursePackActivity extends Activity {
     private int countBackupLines(String raw){if(raw==null||raw.isEmpty())return 0;return raw.split("\\n",-1).length;}
 
     private void applyBackup(JSONObject backup) throws Exception{
-        JSONObject data=backup.getJSONObject("data");SharedPreferences.Editor editor=prefs.edit().clear();java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String key=keys.next();JSONObject item=data.getJSONObject(key);String type=item.getString("type");switch(type){case"string"->editor.putString(key,item.getString("value"));case"boolean"->editor.putBoolean(key,item.getBoolean("value"));case"integer"->editor.putInt(key,item.getInt("value"));case"long"->editor.putLong(key,item.getLong("value"));case"float"->editor.putFloat(key,(float)item.getDouble("value"));case"stringSet"->{JSONArray array=item.getJSONArray("value");Set<String> values=new HashSet<>();for(int i=0;i<array.length();i++)values.add(array.getString(i));editor.putStringSet(key,values);}}}editor.putBoolean(KEY_IMPORT_SUCCESS,true);if(!editor.commit())throw new IllegalStateException("commit");TomorrowWidgetProvider.refreshAll(this);recreate();
+        JSONObject data=backup.getJSONObject("data");SharedPreferences.Editor editor=prefs.edit().clear();java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String key=keys.next();JSONObject item=data.getJSONObject(key);String type=item.getString("type");switch(type){case"string"->editor.putString(key,item.getString("value"));case"boolean"->editor.putBoolean(key,item.getBoolean("value"));case"integer"->editor.putInt(key,item.getInt("value"));case"long"->editor.putLong(key,item.getLong("value"));case"float"->editor.putFloat(key,(float)item.getDouble("value"));case"stringSet"->{JSONArray array=item.getJSONArray("value");Set<String> values=new HashSet<>();for(int i=0;i<array.length();i++)values.add(array.getString(i));editor.putStringSet(key,values);}}}editor.putBoolean(KEY_IMPORT_SUCCESS,true);if(!editor.commit())throw new IllegalStateException("commit");TomorrowWidgetProvider.refreshAll(this);PackingReminderReceiver.schedule(this);recreate();
     }
 
     private void showTransientMessage(String message){
@@ -502,7 +548,7 @@ public class CoursePackActivity extends Activity {
     }
 
     private void setItemCheckVisual(ImageView state,boolean checked){state.setPadding(dp(5),dp(5),dp(5),dp(5));if(checked){state.setImageResource(R.drawable.ic_check);state.setColorFilter(dark?0xFF14371D:Color.WHITE);state.setBackground(shape(success,14,0,0));}else{state.setImageDrawable(null);state.setBackground(shape(surfaceHigh,14,2,primary));}}
-    private void refreshTomorrowProgress(boolean animate){int done=countDoneForChecklist();tomorrowStatus.setText(L(progressStatus(tomorrowTotalItems,done,tomorrowMissingSubjects)));tomorrowProgressLabel.setText(L(progressLabel(tomorrowTotalItems,done,tomorrowMissingSubjects)));if(tomorrowProgressRow!=null){tomorrowProgressRow.setContentDescription(L("已装好 "+done+" 件，共 "+tomorrowTotalItems+" 件"));for(int i=0;i<tomorrowProgressRow.getChildCount();i++){View segment=tomorrowProgressRow.getChildAt(i);segment.setBackground(shape(i<done?primary:secondary,4,0,0));if(animate&&motionEnabled()){segment.setScaleY(.55f);segment.animate().scaleY(1).setDuration(220).setInterpolator(emphasized).start();}}}}
+    private void refreshTomorrowProgress(boolean animate){int done=countDoneForChecklist();tomorrowStatus.setText(L(progressStatus(tomorrowTotalItems,done,tomorrowMissingSubjects)));tomorrowProgressLabel.setText(L(progressLabel(tomorrowTotalItems,done,tomorrowMissingSubjects)));if(done==tomorrowTotalItems&&tomorrowMissingSubjects==0)PackingReminderReceiver.dismissNotification(this);if(tomorrowProgressRow!=null){tomorrowProgressRow.setContentDescription(L("已装好 "+done+" 件，共 "+tomorrowTotalItems+" 件"));for(int i=0;i<tomorrowProgressRow.getChildCount();i++){View segment=tomorrowProgressRow.getChildAt(i);segment.setBackground(shape(i<done?primary:secondary,4,0,0));if(animate&&motionEnabled()){segment.setScaleY(.55f);segment.animate().scaleY(1).setDuration(220).setInterpolator(emphasized).start();}}}}
     private String progressStatus(int total,int done,int missing){if(total==0&&missing>0)return"先设置携带物";if(total==0)return"无需准备物品";if(done==total&&missing==0)return"全部装好了";return"还差 "+(total-done)+" 件";}
     private String progressLabel(int total,int done,int missing){if(missing>0)return missing+" 个科目尚未设置 · "+done+" / "+total+" 已装好";return total==0?"这些科目都确认无需携带物品":done+" / "+total+" 已装好";}
     private void buildProgressSegments(LinearLayout row,int total,int done){for(int i=0;i<total;i++){View segment=new View(this);segment.setBackground(shape(i<done?primary:secondary,4,0,0));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(8),1);if(i>0)p.setMargins(dp(5),0,0,0);row.addView(segment,p);}row.setContentDescription(L("已装好 "+done+" 件，共 "+total+" 件"));}

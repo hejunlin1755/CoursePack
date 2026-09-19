@@ -15,6 +15,9 @@ final class AppText {
     static final String KEY_THEME = "settings_theme_v1";
     static final String KEY_PALETTE = "settings_palette_v1";
     static final String KEY_HAPTICS = "settings_haptics_v1";
+    static final String KEY_REMINDER_ENABLED = "settings_reminder_enabled_v1";
+    static final String KEY_REMINDER_HOUR = "settings_reminder_hour_v1";
+    static final String KEY_REMINDER_MINUTE = "settings_reminder_minute_v1";
 
     private AppText() { }
 
@@ -68,6 +71,27 @@ final class AppText {
             case "简体中文" -> "Simplified Chinese";
             case "交互" -> "Interaction";
             case "触感反馈" -> "Haptic feedback";
+            case "书包提醒" -> "Packing reminder";
+            case "提醒时间" -> "Reminder time";
+            case "调整提醒时间" -> "Change reminder time";
+            case "版本更新" -> "What's new";
+            case "查看 2.9.0 的新功能" -> "See what's new in 2.9.0";
+            case "使用引导" -> "Getting started";
+            case "重新查看第一次使用流程" -> "View the first-use guide again";
+            case "跳过" -> "Skip";
+            case "稍后设置" -> "Set up later";
+            case "上一步" -> "Back";
+            case "下一步" -> "Next";
+            case "导入课表" -> "Import timetable";
+            case "2.9.0 更新" -> "What's new in 2.9.0";
+            case "只展示这次可以直接用到的新功能" -> "Only the changes you can use right away";
+            case "按时整理书包" -> "Pack on time";
+            case "设定提醒时间；只有清单尚未完成时才会通知。" -> "Choose a reminder time. You are notified only when the checklist is unfinished.";
+            case "第一次使用更清楚" -> "A clearer first run";
+            case "三步完成导入课表、设置携带物和开始打卡。" -> "Import a timetable, set carry items, and start checking off in three steps.";
+            case "随时重新查看引导" -> "Replay the guide anytime";
+            case "可从设置的“关于”区域再次打开，不会强制重复出现。" -> "Open it again from About in Settings. It will not keep appearing by itself.";
+            case "知道了" -> "Got it";
             case "数据" -> "Data";
             case "导出备份" -> "Export backup";
             case "保存课程、携带物、打卡和设置" -> "Save lessons, carry items, checks, and settings";
@@ -146,7 +170,6 @@ final class AppText {
             case "课表只安排科目，携带物统一在科目库管理" -> "Schedule subjects here; manage carry items in Subjects";
             case "批量设置节次时间" -> "Set lesson times in bulk";
             case "批量导入课表" -> "Import schedule";
-            case "导入课表" -> "Import schedule";
             case "设置节次时间" -> "Set lesson times";
             case "粘贴文字批量导入课程表" -> "Paste text to import a schedule";
             case "从图片或文字导入课程表" -> "Import a schedule from an image or text";

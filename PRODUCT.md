@@ -40,6 +40,8 @@ Used on a phone at home, typically the evening before class. The supplied timeta
 - Chinese and English user interfaces, with system-language following or an explicit in-app override.
 - A full-screen settings surface for light/dark/system theme mode, accent palette, haptics, language, and a compact local-data overview.
 - JSON backup export and confirmed import through Android's system document picker, without storage permission.
+- A skippable three-step first-run guide that leads directly into timetable import, plus a once-per-version user-facing update sheet that excludes developer maintenance notes.
+- An optional daily packing reminder with a user-selected time. It requests notification permission only when enabled and stays silent when the active checklist is already complete.
 
 ## Brand Commitments
 
@@ -59,6 +61,7 @@ Material 3 Expressive is a binding visual and interaction reference.
 - Editing a subject once must update every timetable occurrence of that subject.
 - Keep the schedule readable before adding decoration.
 - Preserve user data locally and work without an account or network.
+- Reminders are opt-in and must re-check completion at delivery time rather than notifying from stale state.
 
 ## Accessibility & Inclusion
 
