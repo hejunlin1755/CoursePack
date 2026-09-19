@@ -31,7 +31,7 @@ Used on a phone at home, typically the evening before class. The supplied timeta
 - Reusable subject library with a subject name, a list of default carry items, or an explicit no-items state.
 - Editable weekly Monday-to-Friday timetable whose entries reference subjects and only own weekday, period, and time.
 - Native time pickers for individual lessons plus reusable batch generation from start time, lesson duration, break duration, period range, and selected weekdays.
-- Safe text schedule import for weekday lists and copied table/OCR text, with a conflict-aware preview before any data is written.
+- On-device Chinese OCR for timetable photos plus safe text import for weekday lists and copied tables. Positioned OCR lines are rebuilt into weekday and period cells when the photo exposes a recognizable grid; every result remains editable and enters a conflict-aware preview before any data is written.
 - Tomorrow view that groups repeated lessons by subject and persists a separate check state for every individual item.
 - Take-out guidance that surfaces packed items not required on the current preparation day and removes them from the bag state one item at a time.
 - Optional daily carry items independent of subjects: permanent items recur with a fresh check every day, while temporary items appear only on the current preparation date.

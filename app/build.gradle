@@ -9,8 +9,8 @@ android {
         applicationId 'com.kechengbao.app'
         minSdk 26
         targetSdk 36
-        versionCode 29
-        versionName '2.7.0'
+        versionCode 30
+        versionName '2.8.0'
     }
 
     buildTypes {
@@ -23,4 +23,8 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+}
+
+dependencies {
+    implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
 }

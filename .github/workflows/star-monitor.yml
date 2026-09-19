@@ -57,6 +57,7 @@ jobs:
               echo
               echo '本次仅记录数据；宣传必须由真实受众、不同渠道和不同内容产生，不自动发帖。'
             } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Keep the latest public snapshot
         uses: actions/upload-artifact@v4

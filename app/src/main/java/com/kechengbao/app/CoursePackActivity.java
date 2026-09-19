@@ -38,6 +38,12 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.window.OnBackInvokedDispatcher;
 
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.text.TextRecognition;
+import com.google.mlkit.vision.text.TextRecognizer;
+import com.google.mlkit.vision.text.Text;
+import com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -73,6 +79,7 @@ public class CoursePackActivity extends Activity {
     private static final String KEY_IMPORT_SUCCESS = "import_success_v1";
     private static final int REQUEST_EXPORT_BACKUP = 601;
     private static final int REQUEST_IMPORT_BACKUP = 602;
+    private static final int REQUEST_SCHEDULE_IMAGE = 603;
     private static final int BACKUP_FORMAT_VERSION = 1;
     private static final int MAX_BACKUP_BYTES = 2 * 1024 * 1024;
     private static final String[] DAYS = {"星期一", "星期二", "星期三", "星期四", "星期五"};
@@ -90,6 +97,10 @@ public class CoursePackActivity extends Activity {
     private FrameLayout root, contentHost;
     private View completionOverlay;
     private TextView fab, tomorrowStatus, tomorrowProgressLabel, clearChecksButton;
+    private Dialog scheduleImportDialog;
+    private EditText scheduleImportInput;
+    private TextView scheduleImportImageAction;
+    private TextView scheduleImportError;
     private LinearLayout tomorrowProgressRow;
     private int selectedDay, selectedTab = 1, tomorrowTotalItems, tomorrowMissingSubjects;
     private int settingsReturnTab = 1;
@@ -300,7 +311,7 @@ public class CoursePackActivity extends Activity {
 
         page.addView(settingsSectionTitle("数据"));page.addView(settingsDataCard(),margin(-1,-2,0,8,0,24));
 
-        page.addView(settingsSectionTitle("关于"));LinearLayout about=column();about.setPadding(dp(18),dp(14),dp(18),dp(14));about.setBackground(shape(surfaceHigh,20,0,0));about.addView(label("课程包 2.7.0",17,text,true));about.addView(label("数据仅保存在本机 · 无需联网",13,muted,false),margin(-1,-2,0,5,0,0));page.addView(about);scroll.addView(page);if(settingsScrollY>0)scroll.post(()->scroll.scrollTo(0,settingsScrollY));return scroll;
+        page.addView(settingsSectionTitle("关于"));LinearLayout about=column();about.setPadding(dp(18),dp(14),dp(18),dp(14));about.setBackground(shape(surfaceHigh,20,0,0));about.addView(label("课程包 2.8.0",17,text,true));about.addView(label("数据仅保存在本机 · 无需联网",13,muted,false),margin(-1,-2,0,5,0,0));page.addView(about);scroll.addView(page);if(settingsScrollY>0)scroll.post(()->scroll.scrollTo(0,settingsScrollY));return scroll;
     }
 
     private void applySettingAndRecreate(ScrollView scroll,String key,String value){if(value.equals(prefs.getString(key,"system")))return;settingsScrollY=scroll.getScrollY();animateSettingsRestore=true;prefs.edit().putString(key,value).apply();if(motionEnabled())contentHost.animate().alpha(.1f).translationY(dp(-10)).setDuration(150).setInterpolator(emphasized).withEndAction(this::recreate).start();else recreate();}
@@ -337,7 +348,7 @@ public class CoursePackActivity extends Activity {
 
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
         super.onActivityResult(requestCode,resultCode,data);if(resultCode!=RESULT_OK||data==null||data.getData()==null)return;Uri uri=data.getData();
-        if(requestCode==REQUEST_EXPORT_BACKUP)writeBackup(uri);else if(requestCode==REQUEST_IMPORT_BACKUP)readBackupForImport(uri);
+        if(requestCode==REQUEST_EXPORT_BACKUP)writeBackup(uri);else if(requestCode==REQUEST_IMPORT_BACKUP)readBackupForImport(uri);else if(requestCode==REQUEST_SCHEDULE_IMAGE)recognizeScheduleImage(uri);
     }
 
     private void writeBackup(Uri uri){
@@ -346,7 +357,7 @@ public class CoursePackActivity extends Activity {
     }
 
     private JSONObject createBackupJson() throws Exception{
-        JSONObject rootObject=new JSONObject();rootObject.put("format","coursepack-backup");rootObject.put("formatVersion",BACKUP_FORMAT_VERSION);rootObject.put("appVersion","2.7.0");rootObject.put("exportedAt",java.time.OffsetDateTime.now().toString());JSONObject data=new JSONObject();
+        JSONObject rootObject=new JSONObject();rootObject.put("format","coursepack-backup");rootObject.put("formatVersion",BACKUP_FORMAT_VERSION);rootObject.put("appVersion","2.8.0");rootObject.put("exportedAt",java.time.OffsetDateTime.now().toString());JSONObject data=new JSONObject();
         for(Map.Entry<String,?> entry:prefs.getAll().entrySet()){if(KEY_IMPORT_SUCCESS.equals(entry.getKey()))continue;Object value=entry.getValue();JSONObject item=new JSONObject();if(value instanceof String){item.put("type","string");item.put("value",value);}else if(value instanceof Boolean){item.put("type","boolean");item.put("value",value);}else if(value instanceof Integer){item.put("type","integer");item.put("value",value);}else if(value instanceof Long){item.put("type","long");item.put("value",value);}else if(value instanceof Float){item.put("type","float");item.put("value",value);}else if(value instanceof Set){item.put("type","stringSet");JSONArray values=new JSONArray();for(Object member:(Set<?>)value)if(member instanceof String)values.put(member);item.put("value",values);}else continue;data.put(entry.getKey(),item);}
         rootObject.put("data",data);return rootObject;
     }
@@ -498,17 +509,36 @@ public class CoursePackActivity extends Activity {
 
     private View buildSchedulePage(){
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);LinearLayout page=column();page.setPadding(dp(20),dp(22),dp(20),dp(112));addPageHeader(page,"本周课表","课表只安排科目，携带物统一在科目库管理",18);page.addView(buildDaySelector(),margin(-1,52,0,0,0,10));
-        LinearLayout tools=new LinearLayout(this);tools.setOrientation(LinearLayout.HORIZONTAL);TextView importText=button("批量导入课表",false);importText.setContentDescription(L("粘贴文字批量导入课程表"));importText.setOnClickListener(v->showScheduleTextImport());tools.addView(importText,new LinearLayout.LayoutParams(0,dp(50),1));TextView batchTime=button("设置节次时间",false);batchTime.setContentDescription(L("批量设置星期一到星期五的节次时间"));batchTime.setOnClickListener(v->showBatchTimeEditor());LinearLayout.LayoutParams timeParams=new LinearLayout.LayoutParams(0,dp(50),1);timeParams.setMargins(dp(10),0,0,0);tools.addView(batchTime,timeParams);page.addView(tools,margin(-1,50,0,0,0,22));
+        LinearLayout tools=new LinearLayout(this);tools.setOrientation(LinearLayout.HORIZONTAL);TextView importText=button("批量导入课表",false);importText.setContentDescription(L("从图片或文字导入课程表"));importText.setOnClickListener(v->showScheduleTextImport());tools.addView(importText,new LinearLayout.LayoutParams(0,dp(50),1));TextView batchTime=button("设置节次时间",false);batchTime.setContentDescription(L("批量设置星期一到星期五的节次时间"));batchTime.setOnClickListener(v->showBatchTimeEditor());LinearLayout.LayoutParams timeParams=new LinearLayout.LayoutParams(0,dp(50),1);timeParams.setMargins(dp(10),0,0,0);tools.addView(batchTime,timeParams);page.addView(tools,margin(-1,50,0,0,0,22));
         List<Entry> day=entriesFor(selectedDay);LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);heading.addView(label(DAYS[selectedDay],22,text,true),new LinearLayout.LayoutParams(0,dp(40),1));TextView count=label(day.size()+" 节课",13,onPrimaryContainer,true);count.setGravity(Gravity.CENTER);count.setBackground(shape(primaryContainer,16,0,0));heading.addView(count,lp(english?88:70,34));page.addView(heading,margin(-1,40,0,0,0,10));if(day.isEmpty())page.addView(emptyState("这天没有课","可以批量导入，也可以点“排一节课”手动添加。"));else page.addView(scheduleList(day));scroll.addView(page);return scroll;
     }
 
     private void showScheduleTextImport(){
-        Dialog dialog=bottomDialog();LinearLayout content=sheet("批量导入课表","粘贴课程文字，先预览再导入；支持按星期分行或从表格、OCR 复制的内容");
+        Dialog dialog=bottomDialog();scheduleImportDialog=dialog;LinearLayout content=sheet("导入课表","选择图片离线识别，或粘贴课程文字；确认预览后才会写入");
+        TextView imageAction=button("选择课程表图片",false);scheduleImportImageAction=imageAction;imageAction.setContentDescription(L("从相册选择课程表图片并离线识别"));content.addView(imageAction,lp(-1,52));imageAction.setOnClickListener(v->startScheduleImageImport());
         TextView example=label(T("示例：星期一：语文，数学，英语\n星期二：历史，地理，体育","Example: Monday: Math, English, PE\nTuesday: History, Science, Art"),13,onPrimaryContainer,false);example.setPadding(dp(16),dp(13),dp(16),dp(13));example.setBackground(shape(primaryContainer,18,0,0));content.addView(example,margin(-1,-2,0,0,0,14));
-        LinearLayout fieldGroup=column();fieldGroup.addView(label("课程文字",13,muted,true),margin(-1,-2,2,0,0,7));EditText input=multiLineInput("从相册文字识别、聊天或表格复制后粘贴到这里");fieldGroup.addView(input,lp(-1,190));content.addView(fieldGroup,margin(-1,-2,0,0,0,12));
-        TextView hint=label("空、无课、- 会保留节次但不创建课程；每星期最多识别 12 节",12,muted,false);content.addView(hint,margin(-1,-2,2,0,0,12));TextView error=label("",13,dark?0xFFFFB4AB:0xFFBA1A1A,true);error.setVisibility(View.GONE);content.addView(error,margin(-1,-2,2,0,0,10));TextView preview=button("生成导入预览",true);content.addView(preview,lp(-1,52));preview.setOnClickListener(v->{ScheduleTextParser.Result result=ScheduleTextParser.parse(input.getText().toString());if(result.isEmpty()){showBatchError(error,"没有识别到课程，请按示例加入星期和科目");return;}dialog.dismiss();root.postDelayed(()->showScheduleImportPreview(result),120);});
+        LinearLayout fieldGroup=column();fieldGroup.addView(label("识别与课程文字",13,muted,true),margin(-1,-2,2,0,0,7));EditText input=multiLineInput("选择图片后会在这里显示识别结果，也可以直接粘贴并修改");scheduleImportInput=input;fieldGroup.addView(input,lp(-1,190));content.addView(fieldGroup,margin(-1,-2,0,0,0,12));
+        TextView hint=label("图片识别在本机完成。请先修正分组、错字和星期，再生成预览",12,muted,false);content.addView(hint,margin(-1,-2,2,0,0,12));TextView error=label("",13,dark?0xFFFFB4AB:0xFFBA1A1A,true);scheduleImportError=error;error.setVisibility(View.GONE);content.addView(error,margin(-1,-2,2,0,0,10));TextView preview=button("生成导入预览",true);content.addView(preview,lp(-1,52));preview.setOnClickListener(v->{ScheduleTextParser.Result result=ScheduleTextParser.parse(input.getText().toString());if(result.isEmpty()){showBatchError(error,"没有识别到课程，请检查星期和科目的排列");return;}dialog.dismiss();root.postDelayed(()->showScheduleImportPreview(result),120);});
+        dialog.setOnDismissListener(ignored->{if(scheduleImportDialog==dialog){scheduleImportDialog=null;scheduleImportInput=null;scheduleImportImageAction=null;scheduleImportError=null;}});
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(content);showBottomDialog(dialog,scroll,(int)(getResources().getDisplayMetrics().heightPixels*.9f));
     }
+
+    private void startScheduleImageImport(){
+        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("image/*");startActivityForResult(intent,REQUEST_SCHEDULE_IMAGE);
+    }
+
+    private void recognizeScheduleImage(Uri uri){
+        if(scheduleImportDialog==null||scheduleImportInput==null)return;
+        setScheduleImageLoading(true);if(scheduleImportError!=null)scheduleImportError.setVisibility(View.GONE);
+        try{
+            InputImage image=InputImage.fromFilePath(this,uri);TextRecognizer recognizer=TextRecognition.getClient(new ChineseTextRecognizerOptions.Builder().build());
+            recognizer.process(image).addOnSuccessListener(result->{String recognized=formatScheduleOcr(result);if(recognized.isEmpty())recognized=result.getText().trim();if(recognized.isEmpty()){showScheduleImageError("图片中没有识别到文字，请换一张更清晰、正对课表的图片");return;}scheduleImportInput.setText(recognized);scheduleImportInput.setSelection(recognized.length());showTransientMessage("识别完成，请先检查文字再生成预览");}).addOnFailureListener(error->showScheduleImageError("图片识别失败，请换一张图片重试")).addOnCompleteListener(task->{recognizer.close();setScheduleImageLoading(false);});
+        }catch(Exception error){setScheduleImageLoading(false);showScheduleImageError("无法读取这张图片，请换一张图片重试");}
+    }
+
+    private void setScheduleImageLoading(boolean loading){if(scheduleImportImageAction==null)return;scheduleImportImageAction.setEnabled(!loading);scheduleImportImageAction.setAlpha(loading?.55f:1f);scheduleImportImageAction.setText(L(loading?"正在离线识别…":"选择课程表图片"));}
+    private void showScheduleImageError(String message){if(scheduleImportError!=null)showBatchError(scheduleImportError,message);}
+    private String formatScheduleOcr(Text result){List<ScheduleOcrLayout.Token> tokens=new ArrayList<>();for(Text.TextBlock block:result.getTextBlocks())for(Text.Line line:block.getLines()){android.graphics.Rect box=line.getBoundingBox();if(box!=null)tokens.add(new ScheduleOcrLayout.Token(line.getText(),box.left,box.top,box.right,box.bottom));}return ScheduleOcrLayout.format(tokens);}
 
     private EditText multiLineInput(String hint){EditText field=input(hint,"");field.setSingleLine(false);field.setGravity(Gravity.TOP|Gravity.START);field.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_FLAG_MULTI_LINE|InputType.TYPE_TEXT_FLAG_CAP_SENTENCES);field.setPadding(dp(16),dp(14),dp(16),dp(14));field.setMaxLines(12);field.setHorizontallyScrolling(false);field.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(50_000)});return field;}
 
