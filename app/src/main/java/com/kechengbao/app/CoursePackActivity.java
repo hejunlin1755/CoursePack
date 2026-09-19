@@ -24,6 +24,7 @@ import android.provider.Settings;
 import android.text.InputType;
 import android.util.Base64;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -79,7 +80,7 @@ public class CoursePackActivity extends Activity {
     private static final String KEY_IMPORT_SUCCESS = "import_success_v1";
     private static final String KEY_ONBOARDING_DONE = "settings_onboarding_done_v1";
     private static final String KEY_WHATS_NEW_VERSION = "settings_whats_new_version_v1";
-    private static final int CURRENT_VERSION_CODE = 31;
+    private static final int CURRENT_VERSION_CODE = 32;
     private static final int REQUEST_EXPORT_BACKUP = 601;
     private static final int REQUEST_IMPORT_BACKUP = 602;
     private static final int REQUEST_SCHEDULE_IMAGE = 603;
@@ -102,10 +103,10 @@ public class CoursePackActivity extends Activity {
     private View completionOverlay;
     private FrameLayout onboardingOverlay, onboardingStage;
     private LinearLayout onboardingDots, reminderToggleRow;
-    private TextView onboardingNext, onboardingBack, onboardingStepLabel;
+    private TextView onboardingNext, onboardingBack, onboardingStepLabel, onboardingTimeLabel;
     private View reminderTimeRow;
     private int onboardingStep;
-    private boolean pendingReminderEnable, onboardingLaunchedFromSettings;
+    private boolean pendingReminderEnable, pendingOnboardingPermission, onboardingLaunchedFromSettings;
     private TextView fab, tomorrowStatus, tomorrowProgressLabel, clearChecksButton;
     private Dialog scheduleImportDialog;
     private EditText scheduleImportInput;
@@ -325,7 +326,7 @@ public class CoursePackActivity extends Activity {
 
         page.addView(settingsSectionTitle("数据"));page.addView(settingsDataCard(),margin(-1,-2,0,8,0,24));
 
-        page.addView(settingsSectionTitle("关于"));LinearLayout about=column();about.setPadding(dp(8),dp(8),dp(8),dp(8));about.setBackground(shape(surfaceHigh,20,0,0));LinearLayout version=column();version.setPadding(dp(10),dp(7),dp(10),dp(10));version.addView(label("课程包 2.9.0",17,text,true));version.addView(label("数据仅保存在本机 · 无需联网",13,muted,false),margin(-1,-2,0,5,0,0));about.addView(version);about.addView(settingsActionRow(R.drawable.ic_today,"版本更新","查看 2.9.0 的新功能",this::showWhatsNew),lp(-1,68));about.addView(settingsActionRow(R.drawable.ic_subjects,"使用引导","重新查看第一次使用流程",this::showFirstRun),lp(-1,68));page.addView(about);scroll.addView(page);if(settingsScrollY>0)scroll.post(()->scroll.scrollTo(0,settingsScrollY));return scroll;
+        page.addView(settingsSectionTitle("关于"));LinearLayout about=column();about.setPadding(dp(8),dp(8),dp(8),dp(8));about.setBackground(shape(surfaceHigh,20,0,0));LinearLayout version=column();version.setPadding(dp(10),dp(7),dp(10),dp(10));version.addView(label("课程包 2.9.1",17,text,true));version.addView(label("数据仅保存在本机 · 无需联网",13,muted,false),margin(-1,-2,0,5,0,0));about.addView(version);about.addView(settingsActionRow(R.drawable.ic_today,"版本更新","查看 2.9.1 的新功能",this::showWhatsNew),lp(-1,68));about.addView(settingsActionRow(R.drawable.ic_subjects,"使用引导","重新查看第一次使用流程",this::showFirstRun),lp(-1,68));page.addView(about);scroll.addView(page);if(settingsScrollY>0)scroll.post(()->scroll.scrollTo(0,settingsScrollY));return scroll;
     }
 
     private View reminderSettingsCard(){
@@ -341,21 +342,116 @@ public class CoursePackActivity extends Activity {
     private void updateReminderUi(boolean enabled){if(reminderToggleRow!=null)updateToggleRow(reminderToggleRow,enabled);if(reminderTimeRow!=null){setEnabledTree(reminderTimeRow,enabled);reminderTimeRow.setAlpha(enabled?1f:.42f);}}
     private void setEnabledTree(View view,boolean enabled){view.setEnabled(enabled);if(view instanceof ViewGroup group)for(int i=0;i<group.getChildCount();i++)setEnabledTree(group.getChildAt(i),enabled);}
 
-    @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){super.onRequestPermissionsResult(requestCode,permissions,grantResults);if(requestCode!=REQUEST_NOTIFICATION_PERMISSION||!pendingReminderEnable)return;pendingReminderEnable=false;if(grantResults.length>0&&grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED)setReminderEnabled(true);else showTransientMessage(T("没有通知权限，书包提醒未开启","Notification permission denied; reminder stays off"));}
-
-    private void showFirstRun(){
-        if(onboardingOverlay!=null)return;onboardingLaunchedFromSettings=selectedTab==3;onboardingStep=0;FrameLayout overlay=new FrameLayout(this);onboardingOverlay=overlay;overlay.setBackgroundColor(bg);overlay.setClickable(true);overlay.setFocusable(true);LinearLayout shell=column();shell.setPadding(dp(20),dp(18),dp(20),dp(18));LinearLayout top=new LinearLayout(this);top.setOrientation(LinearLayout.HORIZONTAL);top.setGravity(Gravity.CENTER_VERTICAL);top.addView(label("课程包",18,text,true),new LinearLayout.LayoutParams(0,dp(48),1));TextView stepLabel=label("1 / 3",14,muted,true);onboardingStepLabel=stepLabel;stepLabel.setGravity(Gravity.CENTER);top.addView(stepLabel,lp(64,48));shell.addView(top);FrameLayout stage=new FrameLayout(this);onboardingStage=stage;shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));LinearLayout dots=new LinearLayout(this);onboardingDots=dots;dots.setGravity(Gravity.CENTER);dots.setOrientation(LinearLayout.HORIZONTAL);shell.addView(dots,lp(-1,28));LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);TextView back=button("稍后设置",false);onboardingBack=back;TextView next=button("下一步",true);onboardingNext=next;actions.addView(back,new LinearLayout.LayoutParams(0,dp(54),1));LinearLayout.LayoutParams nextParams=new LinearLayout.LayoutParams(0,dp(54),1);nextParams.setMargins(dp(12),0,0,0);actions.addView(next,nextParams);shell.addView(actions);overlay.addView(shell,new FrameLayout.LayoutParams(-1,-1));back.setOnClickListener(v->{if(onboardingStep==0)finishOnboarding(false);else{onboardingStep--;renderOnboardingStep(false);}});next.setOnClickListener(v->{if(onboardingStep==2)finishOnboarding(true);else{onboardingStep++;renderOnboardingStep(true);}});root.addView(overlay,new FrameLayout.LayoutParams(-1,-1));if(motionEnabled()){overlay.setAlpha(0);overlay.animate().alpha(1).setDuration(180).start();}renderOnboardingStep(true);
+    @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){
+        super.onRequestPermissionsResult(requestCode,permissions,grantResults);
+        if(requestCode!=REQUEST_NOTIFICATION_PERMISSION)return;
+        boolean granted=grantResults.length>0&&grantResults[0]==android.content.pm.PackageManager.PERMISSION_GRANTED;
+        if(pendingOnboardingPermission){
+            pendingOnboardingPermission=false;
+            if(granted){vibrateTap(true);renderOnboardingStep(true);root.postDelayed(()->advanceOnboarding(2),420);}
+            else{renderOnboardingStep(true);showTransientMessage(T("可以稍后在设置中开启通知","You can enable notifications later in Settings"));}
+            return;
+        }
+        if(!pendingReminderEnable)return;
+        pendingReminderEnable=false;
+        if(granted)setReminderEnabled(true);else showTransientMessage(T("没有通知权限，书包提醒未开启","Notification permission denied; reminder stays off"));
     }
 
+    private void showFirstRun(){
+        if(onboardingOverlay!=null)return;
+        onboardingLaunchedFromSettings=selectedTab==3;onboardingStep=0;
+        FrameLayout overlay=new FrameLayout(this);onboardingOverlay=overlay;overlay.setBackgroundColor(bg);overlay.setClickable(true);overlay.setFocusable(true);
+        LinearLayout shell=column();shell.setPadding(dp(20),dp(18),dp(20),dp(18));
+        LinearLayout top=new LinearLayout(this);top.setOrientation(LinearLayout.HORIZONTAL);top.setGravity(Gravity.CENTER_VERTICAL);
+        top.addView(label("课程包",18,text,true),new LinearLayout.LayoutParams(0,dp(48),1));
+        TextView stepLabel=label("1 / 4",14,muted,true);onboardingStepLabel=stepLabel;stepLabel.setGravity(Gravity.CENTER);top.addView(stepLabel,lp(64,48));shell.addView(top);
+        FrameLayout stage=new FrameLayout(this);onboardingStage=stage;shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));
+        LinearLayout dots=new LinearLayout(this);onboardingDots=dots;dots.setGravity(Gravity.CENTER);dots.setOrientation(LinearLayout.HORIZONTAL);shell.addView(dots,lp(-1,28));
+        LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);
+        TextView back=button("稍后设置",false);onboardingBack=back;TextView next=button("开始",true);onboardingNext=next;
+        actions.addView(back,new LinearLayout.LayoutParams(0,dp(56),1));LinearLayout.LayoutParams nextParams=new LinearLayout.LayoutParams(0,dp(56),1);nextParams.setMargins(dp(16),0,0,0);actions.addView(next,nextParams);shell.addView(actions);
+        overlay.addView(shell,new FrameLayout.LayoutParams(-1,-1));
+        back.setOnClickListener(v->handleOnboardingSecondary());
+        next.setOnClickListener(v->animateOnboardingAction(this::handleOnboardingPrimary));
+        root.addView(overlay,new FrameLayout.LayoutParams(-1,-1));
+        if(motionEnabled()){overlay.setAlpha(0);overlay.setScaleX(.985f);overlay.setScaleY(.985f);overlay.animate().alpha(1).scaleX(1).scaleY(1).setDuration(280).setInterpolator(emphasized).start();}
+        renderOnboardingStep(true);
+    }
+
+    private void handleOnboardingPrimary(){
+        if(onboardingStep==0){advanceOnboarding(1);return;}
+        if(onboardingStep==1){
+            if(hasNotificationPermission()){advanceOnboarding(2);return;}
+            pendingOnboardingPermission=true;requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS},REQUEST_NOTIFICATION_PERMISSION);return;
+        }
+        if(onboardingStep==2){if(hasNotificationPermission())setReminderEnabled(true);advanceOnboarding(3);return;}
+        finishOnboarding(true);
+    }
+
+    private void handleOnboardingSecondary(){
+        if(onboardingStep==0){finishOnboarding(false);return;}
+        if(onboardingStep==1||onboardingStep==2){advanceOnboarding(onboardingStep+1);return;}
+        finishOnboarding(false);
+    }
+
+    private void advanceOnboarding(int step){if(onboardingOverlay==null)return;onboardingStep=Math.max(0,Math.min(3,step));renderOnboardingStep(true);}
+    private boolean hasNotificationPermission(){return Build.VERSION.SDK_INT<33||checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)==android.content.pm.PackageManager.PERMISSION_GRANTED;}
+
     private void renderOnboardingStep(boolean forward){
-        if(onboardingStage==null)return;String[] titles={T("把明天的书包一次收好","Pack tomorrow's bag in one go"),T("把课表交给课程包","Bring in your timetable"),T("照着清单逐件打卡","Check items off one by one")};String[] bodies={T("课程、课本和用品放在同一份清单里。晚上打开就知道还差什么。","Courses, books, and supplies stay in one checklist, so you always know what is left."),T("拍下课程表离线识别，或手动排课。导入前可以检查和修改。","Recognize a timetable photo offline or add lessons manually. Review everything before importing."),T("每个科目只设置一次携带物。以后按当天清单整理，完成时会明确告诉你。","Set carry items once per subject, then pack from the daily checklist and get a clear finish state.")};int[] icons={R.mipmap.ic_launcher,R.drawable.ic_calendar,R.drawable.ic_subjects};LinearLayout page=column();page.setGravity(Gravity.CENTER_HORIZONTAL);page.setPadding(dp(10),dp(32),dp(10),dp(20));ImageView art=new ImageView(this);art.setImageResource(icons[onboardingStep]);if(onboardingStep>0){art.setColorFilter(onPrimaryContainer);art.setPadding(dp(28),dp(28),dp(28),dp(28));art.setBackground(shape(primaryContainer,36,0,0));}page.addView(art,lp(132,132));TextView titleView=label(titles[onboardingStep],32,text,true);titleView.setGravity(Gravity.CENTER);titleView.setLetterSpacing(-.02f);page.addView(titleView,margin(-1,-2,0,30,0,0));TextView body=label(bodies[onboardingStep],16,muted,false);body.setGravity(Gravity.CENTER);body.setLineSpacing(dp(3),1f);page.addView(body,margin(-1,-2,8,14,8,0));ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(page);View previous=onboardingStage.getChildCount()==0?null:onboardingStage.getChildAt(onboardingStage.getChildCount()-1);onboardingStage.addView(scroll,new FrameLayout.LayoutParams(-1,-1));if(previous!=null){previous.animate().cancel();if(motionEnabled()){scroll.setAlpha(.15f);scroll.setTranslationX(dp(forward?56:-56));scroll.animate().alpha(1).translationX(0).setDuration(280).setInterpolator(emphasized).start();previous.animate().alpha(0).translationX(dp(forward?-34:34)).setDuration(180).setInterpolator(emphasized).withEndAction(()->{if(previous.getParent()==onboardingStage)onboardingStage.removeView(previous);}).start();}else onboardingStage.removeView(previous);}onboardingDots.removeAllViews();for(int i=0;i<3;i++){View dot=new View(this);dot.setBackground(shape(i==onboardingStep?primary:secondary,5,0,0));LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(dp(i==onboardingStep?24:8),dp(8));if(i>0)params.setMargins(dp(7),0,0,0);onboardingDots.addView(dot,params);}if(onboardingStepLabel!=null)onboardingStepLabel.setText((onboardingStep+1)+" / 3");onboardingBack.setText(L(onboardingStep==0?"稍后设置":"上一步"));onboardingNext.setText(L(onboardingStep==2?"导入课表":"下一步"));
+        if(onboardingStage==null)return;
+        String[] titles={T("明天带什么，一眼就知道","Know what to pack at a glance"),T("先允许整理提醒","Allow packing reminders"),T("什么时候提醒你？","When should we remind you?"),T("准备好了","You're ready")};
+        String[] bodies={T("课程、课本和用品汇成一份清单，逐件装进书包。","Courses, books, and supplies become one clear checklist."),T("只有到时间仍未整理完，课程包才会提醒。通知可随时关闭。","CoursePack only notifies you when packing is still unfinished. You can turn it off anytime."),T("默认晚上 20:00 提醒。点时间可以调整；不想用也可以跳过。","The default is 20:00. Tap the time to change it, or skip reminders entirely."),T("下一步导入课表，再给科目设置需要携带的物品。","Next, import your timetable and set carry items for each subject.")};
+        LinearLayout page=column();page.setGravity(Gravity.CENTER_HORIZONTAL);page.setPadding(dp(8),dp(12),dp(8),dp(16));
+        View hero=buildOnboardingHero(onboardingStep);page.addView(hero,lp(-1,224));
+        TextView titleView=label(titles[onboardingStep],30,text,true);titleView.setGravity(Gravity.CENTER);titleView.setLetterSpacing(-.02f);page.addView(titleView,margin(-1,-2,8,20,8,0));
+        TextView body=label(bodies[onboardingStep],15,muted,false);body.setGravity(Gravity.CENTER);body.setLineSpacing(dp(3),1f);page.addView(body,margin(-1,-2,14,12,14,0));
+        if(onboardingStep==1){TextView state=label(hasNotificationPermission()?"通知权限已允许":"稍后也可从设置开启",13,hasNotificationPermission()?success:muted,true);state.setGravity(Gravity.CENTER);state.setPadding(dp(14),0,dp(14),0);state.setBackground(shape(hasNotificationPermission()?tertiaryContainer:surfaceHigh,16,0,0));page.addView(state,margin(-2,36,0,16,0,0));}
+        if(onboardingStep==2){TextView time=label(String.format(Locale.getDefault(),"%02d:%02d",prefs.getInt(AppText.KEY_REMINDER_HOUR,20),prefs.getInt(AppText.KEY_REMINDER_MINUTE,0)),24,onPrimaryContainer,true);onboardingTimeLabel=time;time.setGravity(Gravity.CENTER);time.setBackground(ripple(primaryContainer,22));time.setOnClickListener(v->pickOnboardingReminderTime());page.addView(time,margin(132,54,0,16,0,0));}
+        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(page);
+        View previous=onboardingStage.getChildCount()==0?null:onboardingStage.getChildAt(onboardingStage.getChildCount()-1);onboardingStage.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
+        if(previous!=null){previous.animate().cancel();if(motionEnabled()){scroll.setAlpha(0);scroll.setTranslationX(dp(forward?72:-72));scroll.setScaleX(.96f);scroll.setScaleY(.96f);scroll.animate().alpha(1).translationX(0).scaleX(1).scaleY(1).setDuration(380).setInterpolator(emphasized).start();previous.animate().alpha(0).translationX(dp(forward?-44:44)).scaleX(.92f).scaleY(.92f).rotation(forward?-4:4).setDuration(190).setInterpolator(emphasized).withEndAction(()->{if(previous.getParent()==onboardingStage)onboardingStage.removeView(previous);}).start();}else onboardingStage.removeView(previous);}
+        animateOnboardingHero(hero);
+        onboardingDots.removeAllViews();for(int i=0;i<4;i++){View dot=new View(this);dot.setBackground(shape(i==onboardingStep?primary:secondary,5,0,0));LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(dp(i==onboardingStep?28:8),dp(8));if(i>0)params.setMargins(dp(7),0,0,0);onboardingDots.addView(dot,params);}
+        if(onboardingStepLabel!=null)onboardingStepLabel.setText((onboardingStep+1)+" / 4");
+        String backText=onboardingStep==0?"稍后设置":onboardingStep==1?"暂不允许":onboardingStep==2?"暂不提醒":"先看看";
+        String nextText=onboardingStep==0?"开始":onboardingStep==1?(hasNotificationPermission()?"继续":"允许通知"):onboardingStep==2?(hasNotificationPermission()?"开启提醒":"继续"):"导入课表";
+        onboardingBack.setText(L(backText));onboardingNext.setText(L(nextText));onboardingNext.setEnabled(true);onboardingNext.setAlpha(1f);
+    }
+
+    private View buildOnboardingHero(int step){
+        FrameLayout hero=new FrameLayout(this);hero.setClipChildren(false);hero.setClipToPadding(false);
+        View halo=new View(this);halo.setTag("halo");halo.setBackground(shape(step==3?tertiaryContainer:primaryContainer,54,0,0));FrameLayout.LayoutParams haloP=new FrameLayout.LayoutParams(dp(178),dp(178),Gravity.CENTER);hero.addView(halo,haloP);
+        ImageView icon=new ImageView(this);icon.setTag("heroIcon");
+        if(step==0){icon.setImageResource(R.drawable.ic_launcher_generated_v2);icon.setPadding(dp(13),dp(13),dp(13),dp(13));}
+        else{icon.setImageResource(step==1?R.drawable.ic_notification:step==2?R.drawable.ic_today:R.drawable.ic_check);icon.setColorFilter(step==3?onTertiaryContainer:onPrimaryContainer);icon.setPadding(dp(40),dp(40),dp(40),dp(40));}
+        FrameLayout.LayoutParams iconP=new FrameLayout.LayoutParams(dp(166),dp(166),Gravity.CENTER);hero.addView(icon,iconP);
+        int[] colors={primary,warningAccent,success};String[] marks=step==0?new String[]{"语","数","英"}:step==1?new String[]{"8","✓","!"}:step==2?new String[]{"19","20","21"}:new String[]{"✓","✓","✓"};
+        for(int i=0;i<3;i++){TextView chip=label(marks[i],12,i==0?onPrimary:(dark?0xFF172117:Color.WHITE),true);chip.setTag("chip"+i);chip.setGravity(Gravity.CENTER);chip.setBackground(shape(colors[i],14,0,0));FrameLayout.LayoutParams p=new FrameLayout.LayoutParams(dp(38),dp(38),Gravity.CENTER);p.leftMargin=dp((i-1)*70);p.topMargin=dp(i==1?-78:72);hero.addView(chip,p);}
+        return hero;
+    }
+
+    private void animateOnboardingHero(View hero){
+        if(!motionEnabled())return;View halo=hero.findViewWithTag("halo"),icon=hero.findViewWithTag("heroIcon");
+        halo.setScaleX(.64f);halo.setScaleY(.64f);halo.setRotation(-10);halo.setAlpha(0);halo.animate().scaleX(1).scaleY(1).rotation(0).alpha(1).setDuration(520).setInterpolator(emphasized).start();
+        icon.setScaleX(.72f);icon.setScaleY(.72f);icon.setRotation(8);icon.setAlpha(0);icon.animate().scaleX(1).scaleY(1).rotation(0).alpha(1).setStartDelay(70).setDuration(520).setInterpolator(emphasized).start();
+        for(int i=0;i<3;i++){View chip=hero.findViewWithTag("chip"+i);chip.setAlpha(0);chip.setScaleX(.35f);chip.setScaleY(.35f);chip.setRotation((i-1)*18);chip.setTranslationY(dp(i==1?-24:24));chip.animate().alpha(1).scaleX(1).scaleY(1).rotation(0).translationY(0).setStartDelay(150+i*85L).setDuration(390).setInterpolator(emphasized).start();}
+    }
+
+    private void animateOnboardingAction(Runnable action){
+        if(onboardingNext==null||!motionEnabled()){action.run();return;}TextView button=onboardingNext;button.setEnabled(false);vibrateTap(false);
+        button.animate().scaleX(.34f).scaleY(.84f).rotation(90).setDuration(170).setInterpolator(emphasized).withEndAction(()->{action.run();if(onboardingNext==button){button.setRotation(-90);button.animate().scaleX(1).scaleY(1).rotation(0).setDuration(330).setInterpolator(emphasized).withEndAction(()->button.setEnabled(true)).start();}}).start();
+    }
+
+    private void pickOnboardingReminderTime(){
+        int hour=prefs.getInt(AppText.KEY_REMINDER_HOUR,20),minute=prefs.getInt(AppText.KEY_REMINDER_MINUTE,0);
+        new android.app.TimePickerDialog(this,(picker,newHour,newMinute)->{prefs.edit().putInt(AppText.KEY_REMINDER_HOUR,newHour).putInt(AppText.KEY_REMINDER_MINUTE,newMinute).apply();if(onboardingTimeLabel!=null){onboardingTimeLabel.setText(String.format(Locale.getDefault(),"%02d:%02d",newHour,newMinute));animateValue(onboardingTimeLabel);}},hour,minute,true).show();
     }
 
     private void handleOnboardingBack(){if(onboardingStep>0){onboardingStep--;renderOnboardingStep(false);}else if(onboardingLaunchedFromSettings)finishOnboarding(false);else finishAfterTransition();}
-    private void finishOnboarding(boolean importNow){prefs.edit().putBoolean(KEY_ONBOARDING_DONE,true).putInt(KEY_WHATS_NEW_VERSION,CURRENT_VERSION_CODE).apply();FrameLayout overlay=onboardingOverlay;if(overlay==null)return;Runnable remove=()->{if(overlay.getParent()==root)root.removeView(overlay);onboardingOverlay=null;onboardingStage=null;onboardingDots=null;onboardingNext=null;onboardingBack=null;onboardingStepLabel=null;if(importNow){showSchedule(true);root.postDelayed(this::showScheduleTextImport,240);}};if(motionEnabled())overlay.animate().alpha(0).translationY(dp(28)).setDuration(220).setInterpolator(emphasized).withEndAction(remove).start();else remove.run();}
+    private void finishOnboarding(boolean importNow){prefs.edit().putBoolean(KEY_ONBOARDING_DONE,true).putInt(KEY_WHATS_NEW_VERSION,CURRENT_VERSION_CODE).apply();FrameLayout overlay=onboardingOverlay;if(overlay==null)return;Runnable remove=()->{if(overlay.getParent()==root)root.removeView(overlay);onboardingOverlay=null;onboardingStage=null;onboardingDots=null;onboardingNext=null;onboardingBack=null;onboardingStepLabel=null;onboardingTimeLabel=null;if(importNow){showSchedule(true);root.postDelayed(this::showScheduleTextImport,300);}};if(motionEnabled())overlay.animate().alpha(0).scaleX(1.04f).scaleY(1.04f).rotation(.8f).setDuration(260).setInterpolator(emphasized).withEndAction(remove).start();else remove.run();}
 
     private void showWhatsNew(){
-        prefs.edit().putInt(KEY_WHATS_NEW_VERSION,CURRENT_VERSION_CODE).apply();Dialog dialog=bottomDialog();LinearLayout content=sheet("2.9.0 更新","只展示这次可以直接用到的新功能");TextView badge=label("2.9.0",13,onPrimaryContainer,true);badge.setGravity(Gravity.CENTER);badge.setBackground(shape(primaryContainer,16,0,0));content.addView(badge,lp(78,34));LinearLayout list=column();list.setPadding(dp(8),dp(6),dp(8),dp(6));list.setBackground(shape(surfaceHigh,22,0,0));list.addView(whatsNewFeature(R.drawable.ic_notification,"按时整理书包","设定提醒时间；只有清单尚未完成时才会通知。"));list.addView(whatsNewFeature(R.drawable.ic_calendar,"第一次使用更清楚","三步完成导入课表、设置携带物和开始打卡。"));list.addView(whatsNewFeature(R.drawable.ic_subjects,"随时重新查看引导","可从设置的“关于”区域再次打开，不会强制重复出现。"));content.addView(list,margin(-1,-2,0,14,0,16));TextView done=button("知道了",true);done.setOnClickListener(v->dialog.dismiss());content.addView(done,lp(-1,52));ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(content);showBottomDialog(dialog,scroll,(int)(getResources().getDisplayMetrics().heightPixels*.82f));
+        prefs.edit().putInt(KEY_WHATS_NEW_VERSION,CURRENT_VERSION_CODE).apply();Dialog dialog=bottomDialog();LinearLayout content=sheet("2.9.1 更新","第一次打开更清楚，也更像 Material 3 Expressive");TextView badge=label("2.9.1",13,onPrimaryContainer,true);badge.setGravity(Gravity.CENTER);badge.setBackground(shape(primaryContainer,16,0,0));content.addView(badge,lp(78,34));LinearLayout list=column();list.setPadding(dp(8),dp(6),dp(8),dp(6));list.setBackground(shape(surfaceHigh,22,0,0));list.addView(whatsNewFeature(R.drawable.ic_notification,"权限引导提前说明","首次使用会先解释通知用途，再由你决定是否允许和开启提醒。"));list.addView(whatsNewFeature(R.drawable.ic_launcher_generated_v2,"更灵活的入场动画","插画分层展开，按钮在切页时完成收紧、旋转与形状过渡。"));list.addView(whatsNewFeature(R.drawable.ic_calendar,"操作不再挤在一起","课表页并列按钮保持明确间距，更容易辨认和点按。"));content.addView(list,margin(-1,-2,0,14,0,16));TextView done=button("知道了",true);done.setOnClickListener(v->dialog.dismiss());content.addView(done,lp(-1,52));ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(content);showBottomDialog(dialog,scroll,(int)(getResources().getDisplayMetrics().heightPixels*.82f));
     }
 
     private View whatsNewFeature(int iconRes,String title,String detail){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(8),dp(8),dp(8),dp(8));ImageView icon=new ImageView(this);icon.setImageResource(iconRes);icon.setColorFilter(onPrimaryContainer);icon.setPadding(dp(11),dp(11),dp(11),dp(11));icon.setBackground(shape(primaryContainer,16,0,0));row.addView(icon,lp(50,50));LinearLayout copy=column();copy.addView(label(title,16,text,true));TextView body=label(detail,13,muted,false);body.setMaxLines(3);copy.addView(body,margin(-1,-2,0,3,0,0));LinearLayout.LayoutParams copyParams=new LinearLayout.LayoutParams(0,-2,1);copyParams.setMargins(dp(13),0,0,0);row.addView(copy,copyParams);return row;}
@@ -403,7 +499,7 @@ public class CoursePackActivity extends Activity {
     }
 
     private JSONObject createBackupJson() throws Exception{
-        JSONObject rootObject=new JSONObject();rootObject.put("format","coursepack-backup");rootObject.put("formatVersion",BACKUP_FORMAT_VERSION);rootObject.put("appVersion","2.9.0");rootObject.put("exportedAt",java.time.OffsetDateTime.now().toString());JSONObject data=new JSONObject();
+        JSONObject rootObject=new JSONObject();rootObject.put("format","coursepack-backup");rootObject.put("formatVersion",BACKUP_FORMAT_VERSION);rootObject.put("appVersion","2.9.1");rootObject.put("exportedAt",java.time.OffsetDateTime.now().toString());JSONObject data=new JSONObject();
         for(Map.Entry<String,?> entry:prefs.getAll().entrySet()){if(KEY_IMPORT_SUCCESS.equals(entry.getKey()))continue;Object value=entry.getValue();JSONObject item=new JSONObject();if(value instanceof String){item.put("type","string");item.put("value",value);}else if(value instanceof Boolean){item.put("type","boolean");item.put("value",value);}else if(value instanceof Integer){item.put("type","integer");item.put("value",value);}else if(value instanceof Long){item.put("type","long");item.put("value",value);}else if(value instanceof Float){item.put("type","float");item.put("value",value);}else if(value instanceof Set){item.put("type","stringSet");JSONArray values=new JSONArray();for(Object member:(Set<?>)value)if(member instanceof String)values.put(member);item.put("value",values);}else continue;data.put(entry.getKey(),item);}
         rootObject.put("data",data);return rootObject;
     }
@@ -555,7 +651,7 @@ public class CoursePackActivity extends Activity {
 
     private View buildSchedulePage(){
         ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);LinearLayout page=column();page.setPadding(dp(20),dp(22),dp(20),dp(112));addPageHeader(page,"本周课表","课表只安排科目，携带物统一在科目库管理",18);page.addView(buildDaySelector(),margin(-1,52,0,0,0,10));
-        LinearLayout tools=new LinearLayout(this);tools.setOrientation(LinearLayout.HORIZONTAL);TextView importText=button("批量导入课表",false);importText.setContentDescription(L("从图片或文字导入课程表"));importText.setOnClickListener(v->showScheduleTextImport());tools.addView(importText,new LinearLayout.LayoutParams(0,dp(50),1));TextView batchTime=button("设置节次时间",false);batchTime.setContentDescription(L("批量设置星期一到星期五的节次时间"));batchTime.setOnClickListener(v->showBatchTimeEditor());LinearLayout.LayoutParams timeParams=new LinearLayout.LayoutParams(0,dp(50),1);timeParams.setMargins(dp(10),0,0,0);tools.addView(batchTime,timeParams);page.addView(tools,margin(-1,50,0,0,0,22));
+        LinearLayout tools=new LinearLayout(this);tools.setOrientation(LinearLayout.HORIZONTAL);TextView importText=button("批量导入课表",false);importText.setContentDescription(L("从图片或文字导入课程表"));importText.setOnClickListener(v->showScheduleTextImport());tools.addView(importText,new LinearLayout.LayoutParams(0,dp(50),1));TextView batchTime=button("设置节次时间",false);batchTime.setContentDescription(L("批量设置星期一到星期五的节次时间"));batchTime.setOnClickListener(v->showBatchTimeEditor());LinearLayout.LayoutParams timeParams=new LinearLayout.LayoutParams(0,dp(50),1);timeParams.setMargins(dp(16),0,0,0);tools.addView(batchTime,timeParams);page.addView(tools,margin(-1,50,0,0,0,22));
         List<Entry> day=entriesFor(selectedDay);LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);heading.addView(label(DAYS[selectedDay],22,text,true),new LinearLayout.LayoutParams(0,dp(40),1));TextView count=label(day.size()+" 节课",13,onPrimaryContainer,true);count.setGravity(Gravity.CENTER);count.setBackground(shape(primaryContainer,16,0,0));heading.addView(count,lp(english?88:70,34));page.addView(heading,margin(-1,40,0,0,0,10));if(day.isEmpty())page.addView(emptyState("这天没有课","可以批量导入，也可以点“排一节课”手动添加。"));else page.addView(scheduleList(day));scroll.addView(page);return scroll;
     }
 
@@ -663,7 +759,8 @@ public class CoursePackActivity extends Activity {
     private void showBottomDialog(Dialog dialog,View content,int height){dialog.setContentView(content);Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setGravity(Gravity.BOTTOM);w.getDecorView().setPadding(0,0,0,0);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);WindowManager.LayoutParams p=w.getAttributes();p.width=WindowManager.LayoutParams.MATCH_PARENT;p.height=height;p.gravity=Gravity.BOTTOM;p.x=0;p.y=0;w.setAttributes(p);w.setLayout(WindowManager.LayoutParams.MATCH_PARENT,height);}dialog.show();if(w!=null)w.setLayout(WindowManager.LayoutParams.MATCH_PARENT,height);if(motionEnabled()){content.setAlpha(.72f);content.setTranslationY(dp(72));content.post(()->content.animate().alpha(1f).translationY(0).setDuration(320).setInterpolator(emphasized).start());}}
     private EditText input(String hint,String value){EditText e=new EditText(this);e.setHint(L(hint));e.setText(value);e.setTextSize(16);e.setTextColor(text);e.setHintTextColor(muted);e.setSingleLine(true);e.setPadding(dp(16),0,dp(16),0);e.setBackground(ripple(surfaceHigh,15));return e;}
     private LinearLayout fieldGroup(String title,View field){LinearLayout group=column();group.addView(label(title,13,muted,true),margin(-1,-2,2,0,0,7));group.addView(field,lp(-1,54));return group;}
-    private TextView button(String title,boolean filled){TextView b=label(title,15,filled?onPrimary:text,true);b.setGravity(Gravity.CENTER);b.setClickable(true);b.setFocusable(true);b.setBackground(ripple(filled?primary:surfaceHigh,18));return b;}
+    private TextView button(String title,boolean filled){TextView b=label(title,15,filled?onPrimary:text,true);b.setGravity(Gravity.CENTER);b.setClickable(true);b.setFocusable(true);b.setBackground(ripple(filled?primary:surfaceHigh,18));b.setOnTouchListener((view,event)->{if(!motionEnabled()||!view.isEnabled())return false;if(event.getAction()==MotionEvent.ACTION_DOWN){view.animate().cancel();animateButtonRadius(view,18,28,130);view.animate().scaleX(.955f).scaleY(.91f).rotation(-.7f).setDuration(130).setInterpolator(emphasized).start();}else if(event.getAction()==MotionEvent.ACTION_UP||event.getAction()==MotionEvent.ACTION_CANCEL){view.animate().cancel();animateButtonRadius(view,28,18,260);view.animate().scaleX(1).scaleY(1).rotation(0).setDuration(260).setInterpolator(emphasized).start();}return false;});return b;}
+    private void animateButtonRadius(View view,float from,float to,long duration){if(!(view.getBackground() instanceof android.graphics.drawable.RippleDrawable ripple))return;android.graphics.drawable.Drawable content=ripple.getDrawable(0);if(!(content instanceof GradientDrawable fill))return;ValueAnimator radius=ValueAnimator.ofFloat(dp(from),dp(to));radius.setDuration(duration);radius.setInterpolator(emphasized);radius.addUpdateListener(value->fill.setCornerRadius((float)value.getAnimatedValue()));radius.start();}
     private LinearLayout iconTextButton(int iconRes,String title,int color){LinearLayout button=new LinearLayout(this);button.setOrientation(LinearLayout.HORIZONTAL);button.setGravity(Gravity.CENTER);button.setClickable(true);button.setFocusable(true);button.setBackground(ripple(surfaceHigh,18));button.setContentDescription(L(title));ImageView icon=new ImageView(this);icon.setImageResource(iconRes);icon.setColorFilter(color);button.addView(icon,lp(24,24));TextView textView=label(title,15,color,true);textView.setGravity(Gravity.CENTER_VERTICAL);button.addView(textView,margin(-2,-2,8,0,0,0));return button;}
     private ImageView iconButton(int icon,String desc){ImageView v=new ImageView(this);v.setImageResource(icon);v.setColorFilter(muted);v.setPadding(dp(8),dp(12),dp(8),dp(12));v.setContentDescription(L(desc));v.setBackground(ripple(Color.TRANSPARENT,20));v.setClickable(true);v.setFocusable(true);return v;}
     private View emptyState(String title,String copy){LinearLayout box=column();box.setGravity(Gravity.CENTER);box.setPadding(dp(26),dp(42),dp(26),dp(42));box.setBackground(shape(surfaceHigh,28,0,0));box.addView(label(title,23,text,true));TextView c=label(copy,15,muted,false);c.setGravity(Gravity.CENTER);box.addView(c,margin(-1,-2,0,8,0,0));return box;}
