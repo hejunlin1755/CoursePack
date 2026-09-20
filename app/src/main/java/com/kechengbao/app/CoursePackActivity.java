@@ -80,7 +80,7 @@ public class CoursePackActivity extends Activity {
     private static final String KEY_IMPORT_SUCCESS = "import_success_v1";
     private static final String KEY_ONBOARDING_DONE = "settings_onboarding_done_v1";
     private static final String KEY_WHATS_NEW_VERSION = "settings_whats_new_version_v1";
-    private static final int CURRENT_VERSION_CODE = 32;
+    private static final int CURRENT_VERSION_CODE = 33;
     private static final int REQUEST_EXPORT_BACKUP = 601;
     private static final int REQUEST_IMPORT_BACKUP = 602;
     private static final int REQUEST_SCHEDULE_IMAGE = 603;
@@ -101,9 +101,13 @@ public class CoursePackActivity extends Activity {
     private SharedPreferences prefs;
     private FrameLayout root, contentHost;
     private View completionOverlay;
-    private FrameLayout onboardingOverlay, onboardingStage;
+    private FrameLayout onboardingOverlay, onboardingStage, onboardingNext;
     private LinearLayout onboardingDots, reminderToggleRow;
-    private TextView onboardingNext, onboardingBack, onboardingStepLabel, onboardingTimeLabel;
+    private TextView onboardingBack, onboardingStepLabel, onboardingTimeLabel, onboardingActionTitle;
+    private ImageView onboardingNextIcon;
+    private float[] onboardingFabCorners={32f,32f,32f,32f};
+    private float onboardingFabRotation;
+    private ValueAnimator onboardingFabCornerAnimator,onboardingFabRotationAnimator;
     private View reminderTimeRow;
     private int onboardingStep;
     private boolean pendingReminderEnable, pendingOnboardingPermission, onboardingLaunchedFromSettings;
@@ -326,7 +330,7 @@ public class CoursePackActivity extends Activity {
 
         page.addView(settingsSectionTitle("数据"));page.addView(settingsDataCard(),margin(-1,-2,0,8,0,24));
 
-        page.addView(settingsSectionTitle("关于"));LinearLayout about=column();about.setPadding(dp(8),dp(8),dp(8),dp(8));about.setBackground(shape(surfaceHigh,20,0,0));LinearLayout version=column();version.setPadding(dp(10),dp(7),dp(10),dp(10));version.addView(label("课程包 2.9.1",17,text,true));version.addView(label("数据仅保存在本机 · 无需联网",13,muted,false),margin(-1,-2,0,5,0,0));about.addView(version);about.addView(settingsActionRow(R.drawable.ic_today,"版本更新","查看 2.9.1 的新功能",this::showWhatsNew),lp(-1,68));about.addView(settingsActionRow(R.drawable.ic_subjects,"使用引导","重新查看第一次使用流程",this::showFirstRun),lp(-1,68));page.addView(about);scroll.addView(page);if(settingsScrollY>0)scroll.post(()->scroll.scrollTo(0,settingsScrollY));return scroll;
+        page.addView(settingsSectionTitle("关于"));LinearLayout about=column();about.setPadding(dp(8),dp(8),dp(8),dp(8));about.setBackground(shape(surfaceHigh,20,0,0));LinearLayout version=column();version.setPadding(dp(10),dp(7),dp(10),dp(10));version.addView(label("课程包 2.9.2",17,text,true));version.addView(label("数据仅保存在本机 · 无需联网",13,muted,false),margin(-1,-2,0,5,0,0));about.addView(version);about.addView(settingsActionRow(R.drawable.ic_today,"版本更新","查看 2.9.2 的新功能",this::showWhatsNew),lp(-1,68));about.addView(settingsActionRow(R.drawable.ic_subjects,"使用引导","重新查看第一次使用流程",this::showFirstRun),lp(-1,68));page.addView(about);scroll.addView(page);if(settingsScrollY>0)scroll.post(()->scroll.scrollTo(0,settingsScrollY));return scroll;
     }
 
     private View reminderSettingsCard(){
@@ -359,7 +363,7 @@ public class CoursePackActivity extends Activity {
 
     private void showFirstRun(){
         if(onboardingOverlay!=null)return;
-        onboardingLaunchedFromSettings=selectedTab==3;onboardingStep=0;
+        onboardingLaunchedFromSettings=selectedTab==3;onboardingStep=0;onboardingFabCorners=new float[]{32f,32f,32f,32f};onboardingFabRotation=0f;
         FrameLayout overlay=new FrameLayout(this);onboardingOverlay=overlay;overlay.setBackgroundColor(bg);overlay.setClickable(true);overlay.setFocusable(true);
         LinearLayout shell=column();shell.setPadding(dp(20),dp(18),dp(20),dp(18));
         LinearLayout top=new LinearLayout(this);top.setOrientation(LinearLayout.HORIZONTAL);top.setGravity(Gravity.CENTER_VERTICAL);
@@ -367,9 +371,9 @@ public class CoursePackActivity extends Activity {
         TextView stepLabel=label("1 / 4",14,muted,true);onboardingStepLabel=stepLabel;stepLabel.setGravity(Gravity.CENTER);top.addView(stepLabel,lp(64,48));shell.addView(top);
         FrameLayout stage=new FrameLayout(this);onboardingStage=stage;shell.addView(stage,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout dots=new LinearLayout(this);onboardingDots=dots;dots.setGravity(Gravity.CENTER);dots.setOrientation(LinearLayout.HORIZONTAL);shell.addView(dots,lp(-1,28));
-        LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);
-        TextView back=button("稍后设置",false);onboardingBack=back;TextView next=button("开始",true);onboardingNext=next;
-        actions.addView(back,new LinearLayout.LayoutParams(0,dp(56),1));LinearLayout.LayoutParams nextParams=new LinearLayout.LayoutParams(0,dp(56),1);nextParams.setMargins(dp(16),0,0,0);actions.addView(next,nextParams);shell.addView(actions);
+        LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);actions.setGravity(Gravity.CENTER_VERTICAL);actions.setClipChildren(false);actions.setClipToPadding(false);actions.setPadding(dp(18),dp(10),dp(10),dp(10));actions.setBackground(shape(surfaceHigh,36,0,0));
+        LinearLayout actionCopy=column();TextView actionTitle=label("开始使用",20,primary,true);onboardingActionTitle=actionTitle;actionCopy.addView(actionTitle,lp(-1,28));TextView back=label("稍后设置",13,muted,true);onboardingBack=back;back.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);back.setPadding(0,0,dp(12),0);back.setClickable(true);back.setFocusable(true);actionCopy.addView(back,lp(-1,48));actions.addView(actionCopy,new LinearLayout.LayoutParams(0,dp(76),1));
+        FrameLayout next=new FrameLayout(this);onboardingNext=next;next.setClickable(true);next.setFocusable(true);next.setContentDescription(L("下一步"));next.setBackground(ripple(primaryContainer,32));ImageView nextIcon=new ImageView(this);onboardingNextIcon=nextIcon;nextIcon.setTag("next");nextIcon.setImageResource(R.drawable.ic_arrow_forward);nextIcon.setColorFilter(onPrimaryContainer);nextIcon.setPadding(dp(18),dp(18),dp(18),dp(18));next.addView(nextIcon,new FrameLayout.LayoutParams(-1,-1));actions.addView(next,lp(64,64));shell.addView(actions,lp(-1,96));
         overlay.addView(shell,new FrameLayout.LayoutParams(-1,-1));
         back.setOnClickListener(v->handleOnboardingSecondary());
         next.setOnClickListener(v->animateOnboardingAction(this::handleOnboardingPrimary));
@@ -414,8 +418,8 @@ public class CoursePackActivity extends Activity {
         onboardingDots.removeAllViews();for(int i=0;i<4;i++){View dot=new View(this);dot.setBackground(shape(i==onboardingStep?primary:secondary,5,0,0));LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(dp(i==onboardingStep?28:8),dp(8));if(i>0)params.setMargins(dp(7),0,0,0);onboardingDots.addView(dot,params);}
         if(onboardingStepLabel!=null)onboardingStepLabel.setText((onboardingStep+1)+" / 4");
         String backText=onboardingStep==0?"稍后设置":onboardingStep==1?"暂不允许":onboardingStep==2?"暂不提醒":"先看看";
-        String nextText=onboardingStep==0?"开始":onboardingStep==1?(hasNotificationPermission()?"继续":"允许通知"):onboardingStep==2?(hasNotificationPermission()?"开启提醒":"继续"):"导入课表";
-        onboardingBack.setText(L(backText));onboardingNext.setText(L(nextText));onboardingNext.setEnabled(true);onboardingNext.setAlpha(1f);
+        String nextText=onboardingStep==0?"开始使用":onboardingStep==1?(hasNotificationPermission()?"继续设置":"允许通知"):onboardingStep==2?(hasNotificationPermission()?"开启提醒":"继续设置"):"导入课表";
+        onboardingBack.setText(L(backText));animateOnboardingActionLabel(nextText,forward);morphOnboardingFab(onboardingStep);onboardingNext.setContentDescription(L(nextText));onboardingNext.setEnabled(true);onboardingNext.setAlpha(1f);
     }
 
     private View buildOnboardingHero(int step){
@@ -438,8 +442,31 @@ public class CoursePackActivity extends Activity {
     }
 
     private void animateOnboardingAction(Runnable action){
-        if(onboardingNext==null||!motionEnabled()){action.run();return;}TextView button=onboardingNext;button.setEnabled(false);vibrateTap(false);
-        button.animate().scaleX(.34f).scaleY(.84f).rotation(90).setDuration(170).setInterpolator(emphasized).withEndAction(()->{action.run();if(onboardingNext==button){button.setRotation(-90);button.animate().scaleX(1).scaleY(1).rotation(0).setDuration(330).setInterpolator(emphasized).withEndAction(()->button.setEnabled(true)).start();}}).start();
+        if(onboardingNext==null||!motionEnabled()){action.run();return;}FrameLayout button=onboardingNext;button.setEnabled(false);vibrateTap(false);
+        button.animate().scaleX(.91f).scaleY(.91f).setDuration(90).setInterpolator(emphasized).withEndAction(()->{action.run();if(onboardingNext==button)button.animate().scaleX(1).scaleY(1).setDuration(180).setInterpolator(emphasized).withEndAction(()->button.setEnabled(true)).start();}).start();
+    }
+
+    private void animateOnboardingActionLabel(String value,boolean forward){
+        if(onboardingActionTitle==null)return;String localized=L(value);if(localized.contentEquals(onboardingActionTitle.getText()))return;
+        if(!motionEnabled()){onboardingActionTitle.setText(localized);return;}float distance=dp(18);onboardingActionTitle.animate().cancel();onboardingActionTitle.animate().alpha(0).translationY(forward?-distance:distance).setDuration(90).setInterpolator(emphasized).withEndAction(()->{if(onboardingActionTitle==null)return;onboardingActionTitle.setText(localized);onboardingActionTitle.setTranslationY(forward?distance:-distance);onboardingActionTitle.animate().alpha(1).translationY(0).setStartDelay(90).setDuration(220).setInterpolator(emphasized).start();}).start();
+    }
+
+    private void morphOnboardingFab(int step){
+        if(onboardingNext==null||onboardingNextIcon==null)return;float[] target=switch(step%3){case 0->new float[]{32f,32f,32f,32f};case 1->new float[]{22f,22f,22f,22f};default->new float[]{14f,32f,14f,32f};};float targetRotation=step*360f;boolean finish=step==3;
+        swapOnboardingFabIcon(finish);
+        if(!motionEnabled()){applyOnboardingFabCorners(target);onboardingNext.setRotation(0);onboardingNextIcon.setRotation(0);onboardingFabCorners=target;onboardingFabRotation=targetRotation;return;}
+        if(onboardingFabCornerAnimator!=null)onboardingFabCornerAnimator.cancel();if(onboardingFabRotationAnimator!=null)onboardingFabRotationAnimator.cancel();
+        float[] start=onboardingFabCorners.clone();ValueAnimator corners=ValueAnimator.ofFloat(0f,1f);onboardingFabCornerAnimator=corners;corners.setDuration(600);corners.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());corners.addUpdateListener(value->{float progress=(float)value.getAnimatedValue();float[] now=new float[4];for(int i=0;i<4;i++)now[i]=start[i]+(target[i]-start[i])*progress;onboardingFabCorners=now;applyOnboardingFabCorners(now);});corners.start();
+        float startRotation=onboardingNext.getRotation();ValueAnimator rotation=ValueAnimator.ofFloat(startRotation,targetRotation);onboardingFabRotationAnimator=rotation;rotation.setDuration(900);rotation.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());rotation.addUpdateListener(value->{if(onboardingNext==null||onboardingNextIcon==null)return;float angle=(float)value.getAnimatedValue();onboardingFabRotation=angle;onboardingNext.setRotation(angle);onboardingNextIcon.setRotation(-angle);});rotation.start();
+    }
+
+    private void applyOnboardingFabCorners(float[] corners){
+        if(onboardingNext==null||!(onboardingNext.getBackground() instanceof android.graphics.drawable.RippleDrawable ripple))return;android.graphics.drawable.Drawable content=ripple.getDrawable(0);if(!(content instanceof GradientDrawable fill))return;float tl=dp(corners[0]),tr=dp(corners[1]),bl=dp(corners[2]),br=dp(corners[3]);fill.setCornerRadii(new float[]{tl,tl,tr,tr,br,br,bl,bl});
+    }
+
+    private void swapOnboardingFabIcon(boolean finish){
+        if(onboardingNextIcon==null)return;String state=finish?"finish":"next";if(state.equals(onboardingNextIcon.getTag()))return;onboardingNextIcon.setTag(state);int icon=finish?R.drawable.ic_check:R.drawable.ic_arrow_forward;
+        if(!motionEnabled()){onboardingNextIcon.setImageResource(icon);return;}onboardingNextIcon.animate().alpha(0).scaleX(.9f).scaleY(.9f).setDuration(90).withEndAction(()->{if(onboardingNextIcon==null)return;onboardingNextIcon.setImageResource(icon);onboardingNextIcon.setAlpha(0);onboardingNextIcon.setScaleX(.9f);onboardingNextIcon.setScaleY(.9f);onboardingNextIcon.animate().alpha(1).scaleX(1).scaleY(1).setStartDelay(90).setDuration(220).setInterpolator(emphasized).start();}).start();
     }
 
     private void pickOnboardingReminderTime(){
@@ -448,10 +475,10 @@ public class CoursePackActivity extends Activity {
     }
 
     private void handleOnboardingBack(){if(onboardingStep>0){onboardingStep--;renderOnboardingStep(false);}else if(onboardingLaunchedFromSettings)finishOnboarding(false);else finishAfterTransition();}
-    private void finishOnboarding(boolean importNow){prefs.edit().putBoolean(KEY_ONBOARDING_DONE,true).putInt(KEY_WHATS_NEW_VERSION,CURRENT_VERSION_CODE).apply();FrameLayout overlay=onboardingOverlay;if(overlay==null)return;Runnable remove=()->{if(overlay.getParent()==root)root.removeView(overlay);onboardingOverlay=null;onboardingStage=null;onboardingDots=null;onboardingNext=null;onboardingBack=null;onboardingStepLabel=null;onboardingTimeLabel=null;if(importNow){showSchedule(true);root.postDelayed(this::showScheduleTextImport,300);}};if(motionEnabled())overlay.animate().alpha(0).scaleX(1.04f).scaleY(1.04f).rotation(.8f).setDuration(260).setInterpolator(emphasized).withEndAction(remove).start();else remove.run();}
+    private void finishOnboarding(boolean importNow){prefs.edit().putBoolean(KEY_ONBOARDING_DONE,true).putInt(KEY_WHATS_NEW_VERSION,CURRENT_VERSION_CODE).apply();FrameLayout overlay=onboardingOverlay;if(overlay==null)return;Runnable remove=()->{if(onboardingFabCornerAnimator!=null)onboardingFabCornerAnimator.cancel();if(onboardingFabRotationAnimator!=null)onboardingFabRotationAnimator.cancel();if(overlay.getParent()==root)root.removeView(overlay);onboardingOverlay=null;onboardingStage=null;onboardingDots=null;onboardingNext=null;onboardingNextIcon=null;onboardingActionTitle=null;onboardingBack=null;onboardingStepLabel=null;onboardingTimeLabel=null;onboardingFabCornerAnimator=null;onboardingFabRotationAnimator=null;if(importNow){showSchedule(true);root.postDelayed(this::showScheduleTextImport,300);}};if(motionEnabled())overlay.animate().alpha(0).scaleX(1.04f).scaleY(1.04f).rotation(.8f).setDuration(260).setInterpolator(emphasized).withEndAction(remove).start();else remove.run();}
 
     private void showWhatsNew(){
-        prefs.edit().putInt(KEY_WHATS_NEW_VERSION,CURRENT_VERSION_CODE).apply();Dialog dialog=bottomDialog();LinearLayout content=sheet("2.9.1 更新","第一次打开更清楚，也更像 Material 3 Expressive");TextView badge=label("2.9.1",13,onPrimaryContainer,true);badge.setGravity(Gravity.CENTER);badge.setBackground(shape(primaryContainer,16,0,0));content.addView(badge,lp(78,34));LinearLayout list=column();list.setPadding(dp(8),dp(6),dp(8),dp(6));list.setBackground(shape(surfaceHigh,22,0,0));list.addView(whatsNewFeature(R.drawable.ic_notification,"权限引导提前说明","首次使用会先解释通知用途，再由你决定是否允许和开启提醒。"));list.addView(whatsNewFeature(R.drawable.ic_launcher_generated_v2,"更灵活的入场动画","插画分层展开，按钮在切页时完成收紧、旋转与形状过渡。"));list.addView(whatsNewFeature(R.drawable.ic_calendar,"操作不再挤在一起","课表页并列按钮保持明确间距，更容易辨认和点按。"));content.addView(list,margin(-1,-2,0,14,0,16));TextView done=button("知道了",true);done.setOnClickListener(v->dialog.dismiss());content.addView(done,lp(-1,52));ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(content);showBottomDialog(dialog,scroll,(int)(getResources().getDisplayMetrics().heightPixels*.82f));
+        prefs.edit().putInt(KEY_WHATS_NEW_VERSION,CURRENT_VERSION_CODE).apply();Dialog dialog=bottomDialog();LinearLayout content=sheet("2.9.2 更新","引导按钮现在会真正变形，而不是整颗傻转");TextView badge=label("2.9.2",13,onPrimaryContainer,true);badge.setGravity(Gravity.CENTER);badge.setBackground(shape(primaryContainer,16,0,0));content.addView(badge,lp(78,34));LinearLayout list=column();list.setPadding(dp(8),dp(6),dp(8),dp(6));list.setBackground(shape(surfaceHigh,22,0,0));list.addView(whatsNewFeature(R.drawable.ic_arrow_forward,"形状随步骤变化","按钮依次在圆形、圆角方形和叶片形之间连续变换。"));list.addView(whatsNewFeature(R.drawable.ic_check,"图标始终保持正立","外壳旋转时箭头反向旋转，最后自然交接为完成勾。"));list.addView(whatsNewFeature(R.drawable.ic_subjects,"文字与动作同步","左侧动作提示随前进方向上下交接，快速连续点击也不会叠加动画。"));content.addView(list,margin(-1,-2,0,14,0,16));TextView done=button("知道了",true);done.setOnClickListener(v->dialog.dismiss());content.addView(done,lp(-1,52));ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);scroll.addView(content);showBottomDialog(dialog,scroll,(int)(getResources().getDisplayMetrics().heightPixels*.82f));
     }
 
     private View whatsNewFeature(int iconRes,String title,String detail){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(8),dp(8),dp(8),dp(8));ImageView icon=new ImageView(this);icon.setImageResource(iconRes);icon.setColorFilter(onPrimaryContainer);icon.setPadding(dp(11),dp(11),dp(11),dp(11));icon.setBackground(shape(primaryContainer,16,0,0));row.addView(icon,lp(50,50));LinearLayout copy=column();copy.addView(label(title,16,text,true));TextView body=label(detail,13,muted,false);body.setMaxLines(3);copy.addView(body,margin(-1,-2,0,3,0,0));LinearLayout.LayoutParams copyParams=new LinearLayout.LayoutParams(0,-2,1);copyParams.setMargins(dp(13),0,0,0);row.addView(copy,copyParams);return row;}
@@ -499,7 +526,7 @@ public class CoursePackActivity extends Activity {
     }
 
     private JSONObject createBackupJson() throws Exception{
-        JSONObject rootObject=new JSONObject();rootObject.put("format","coursepack-backup");rootObject.put("formatVersion",BACKUP_FORMAT_VERSION);rootObject.put("appVersion","2.9.1");rootObject.put("exportedAt",java.time.OffsetDateTime.now().toString());JSONObject data=new JSONObject();
+        JSONObject rootObject=new JSONObject();rootObject.put("format","coursepack-backup");rootObject.put("formatVersion",BACKUP_FORMAT_VERSION);rootObject.put("appVersion","2.9.2");rootObject.put("exportedAt",java.time.OffsetDateTime.now().toString());JSONObject data=new JSONObject();
         for(Map.Entry<String,?> entry:prefs.getAll().entrySet()){if(KEY_IMPORT_SUCCESS.equals(entry.getKey()))continue;Object value=entry.getValue();JSONObject item=new JSONObject();if(value instanceof String){item.put("type","string");item.put("value",value);}else if(value instanceof Boolean){item.put("type","boolean");item.put("value",value);}else if(value instanceof Integer){item.put("type","integer");item.put("value",value);}else if(value instanceof Long){item.put("type","long");item.put("value",value);}else if(value instanceof Float){item.put("type","float");item.put("value",value);}else if(value instanceof Set){item.put("type","stringSet");JSONArray values=new JSONArray();for(Object member:(Set<?>)value)if(member instanceof String)values.put(member);item.put("value",values);}else continue;data.put(entry.getKey(),item);}
         rootObject.put("data",data);return rootObject;
     }
@@ -759,7 +786,7 @@ public class CoursePackActivity extends Activity {
     private void showBottomDialog(Dialog dialog,View content,int height){dialog.setContentView(content);Window w=dialog.getWindow();if(w!=null){w.setBackgroundDrawableResource(android.R.color.transparent);w.setGravity(Gravity.BOTTOM);w.getDecorView().setPadding(0,0,0,0);w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);WindowManager.LayoutParams p=w.getAttributes();p.width=WindowManager.LayoutParams.MATCH_PARENT;p.height=height;p.gravity=Gravity.BOTTOM;p.x=0;p.y=0;w.setAttributes(p);w.setLayout(WindowManager.LayoutParams.MATCH_PARENT,height);}dialog.show();if(w!=null)w.setLayout(WindowManager.LayoutParams.MATCH_PARENT,height);if(motionEnabled()){content.setAlpha(.72f);content.setTranslationY(dp(72));content.post(()->content.animate().alpha(1f).translationY(0).setDuration(320).setInterpolator(emphasized).start());}}
     private EditText input(String hint,String value){EditText e=new EditText(this);e.setHint(L(hint));e.setText(value);e.setTextSize(16);e.setTextColor(text);e.setHintTextColor(muted);e.setSingleLine(true);e.setPadding(dp(16),0,dp(16),0);e.setBackground(ripple(surfaceHigh,15));return e;}
     private LinearLayout fieldGroup(String title,View field){LinearLayout group=column();group.addView(label(title,13,muted,true),margin(-1,-2,2,0,0,7));group.addView(field,lp(-1,54));return group;}
-    private TextView button(String title,boolean filled){TextView b=label(title,15,filled?onPrimary:text,true);b.setGravity(Gravity.CENTER);b.setClickable(true);b.setFocusable(true);b.setBackground(ripple(filled?primary:surfaceHigh,18));b.setOnTouchListener((view,event)->{if(!motionEnabled()||!view.isEnabled())return false;if(event.getAction()==MotionEvent.ACTION_DOWN){view.animate().cancel();animateButtonRadius(view,18,28,130);view.animate().scaleX(.955f).scaleY(.91f).rotation(-.7f).setDuration(130).setInterpolator(emphasized).start();}else if(event.getAction()==MotionEvent.ACTION_UP||event.getAction()==MotionEvent.ACTION_CANCEL){view.animate().cancel();animateButtonRadius(view,28,18,260);view.animate().scaleX(1).scaleY(1).rotation(0).setDuration(260).setInterpolator(emphasized).start();}return false;});return b;}
+    private TextView button(String title,boolean filled){TextView b=label(title,15,filled?onPrimary:text,true);b.setGravity(Gravity.CENTER);b.setClickable(true);b.setFocusable(true);b.setBackground(ripple(filled?primary:surfaceHigh,18));b.setOnTouchListener((view,event)->{if(!motionEnabled()||!view.isEnabled())return false;if(event.getAction()==MotionEvent.ACTION_DOWN){view.animate().cancel();animateButtonRadius(view,18,28,130);view.animate().scaleX(.955f).scaleY(.91f).setDuration(130).setInterpolator(emphasized).start();}else if(event.getAction()==MotionEvent.ACTION_UP||event.getAction()==MotionEvent.ACTION_CANCEL){view.animate().cancel();animateButtonRadius(view,28,18,260);view.animate().scaleX(1).scaleY(1).setDuration(260).setInterpolator(emphasized).start();}return false;});return b;}
     private void animateButtonRadius(View view,float from,float to,long duration){if(!(view.getBackground() instanceof android.graphics.drawable.RippleDrawable ripple))return;android.graphics.drawable.Drawable content=ripple.getDrawable(0);if(!(content instanceof GradientDrawable fill))return;ValueAnimator radius=ValueAnimator.ofFloat(dp(from),dp(to));radius.setDuration(duration);radius.setInterpolator(emphasized);radius.addUpdateListener(value->fill.setCornerRadius((float)value.getAnimatedValue()));radius.start();}
     private LinearLayout iconTextButton(int iconRes,String title,int color){LinearLayout button=new LinearLayout(this);button.setOrientation(LinearLayout.HORIZONTAL);button.setGravity(Gravity.CENTER);button.setClickable(true);button.setFocusable(true);button.setBackground(ripple(surfaceHigh,18));button.setContentDescription(L(title));ImageView icon=new ImageView(this);icon.setImageResource(iconRes);icon.setColorFilter(color);button.addView(icon,lp(24,24));TextView textView=label(title,15,color,true);textView.setGravity(Gravity.CENTER_VERTICAL);button.addView(textView,margin(-2,-2,8,0,0,0));return button;}
     private ImageView iconButton(int icon,String desc){ImageView v=new ImageView(this);v.setImageResource(icon);v.setColorFilter(muted);v.setPadding(dp(8),dp(12),dp(8),dp(12));v.setContentDescription(L(desc));v.setBackground(ripple(Color.TRANSPARENT,20));v.setClickable(true);v.setFocusable(true);return v;}

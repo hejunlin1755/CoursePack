@@ -132,7 +132,7 @@ ColorOS 用户可通过以下路径添加：
 
 **[下载最新版本](../../releases/latest)**
 
-当前源码版本：**2.9.1（versionCode 32）**。
+当前源码版本：**2.9.2（versionCode 33）**。
 
 > 仓库只保存源码。APK 应作为 GitHub Release 附件发布，签名密钥不得提交到仓库。
 
