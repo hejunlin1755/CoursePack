@@ -1,197 +1,159 @@
 <p align="center">
-  <img src="app/src/main/res/drawable-nodpi/ic_launcher_generated_v2.png" width="132" alt="课程包应用图标" />
-</p>
-
-<h1 align="center">课程包</h1>
-
-<p align="center">
-  <strong>把课程表变成真正能逐件勾选的书包清单。</strong>
+  <strong>English</strong> · <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 <p align="center">
-  原生 Android · Material 3 Expressive · 完全离线 · 无广告
+  <img src="app/src/main/res/drawable-nodpi/ic_launcher_generated_v2.png" width="132" alt="CoursePack app icon" />
 </p>
 
-<p align="center">
-  <strong>内置中文离线 OCR · 无需上传课程表</strong>
-</p>
+<h1 align="center">CoursePack</h1>
 
-课程包是一款轻量的学生课程表与书包整理应用。每个科目的课本、笔记、作业和用品只需设置一次，排入课表后，应用会自动生成当前需要准备的清单。
+<p align="center"><strong>Turn your timetable into a bag checklist you can tick item by item.</strong></p>
+<p align="center">Native Android · Material 3 Expressive · Fully offline · No ads</p>
+<p align="center"><strong>Built-in offline Chinese OCR · Timetable images never leave your device</strong></p>
 
-它没有账号系统、没有服务器、没有分析 SDK，也没有申请网络权限。课程表图片在设备本机识别，课程、打卡和设置同样只保存在本机。
+CoursePack is a lightweight timetable and school-bag organizer. Set up each subject's textbooks, notebooks, assignments, and supplies once, place the subject in your weekly timetable, and the app automatically builds the checklist for the next school day.
+
+There is no account, server, analytics SDK, or network permission. Timetable recognition, lessons, check states, and settings all stay on your device.
 
 <p align="center">
   <a href="https://github.com/hejunlin1755/CoursePack">
-    <img src="docs/images/star-coursepack.gif" width="640" alt="点一下 GitHub Star 支持课程包" />
+    <img src="docs/images/star-coursepack.gif" width="640" alt="Give CoursePack a GitHub Star" />
   </a>
 </p>
 
 <p align="center">
-  <strong>如果课程包帮到了你，欢迎点一下右上角 Star 支持这个开源项目。</strong><br />
-  <sub>动图由 MIT 许可的 <a href="https://github.com/shinshin86/gh-star-gif">gh-star-gif</a> 生成。</sub>
+  <strong>If CoursePack helps you, please consider starring the project.</strong><br />
+  <sub>Animation generated with the MIT-licensed <a href="https://github.com/shinshin86/gh-star-gif">gh-star-gif</a>.</sub>
 </p>
 
-## 截图
+## Screenshots
 
-<p align="center"><sub>Android 模拟器实机渲染，课程与携带物为演示数据。</sub></p>
+<p align="center"><sub>Captured from the current Android build. Courses and carry items are demo data.</sub></p>
 
 <p align="center">
-  <img src="docs/images/home.png" width="30%" alt="书包准备清单" />
-  <img src="docs/images/schedule.png" width="30%" alt="每周课程表" />
-  <img src="docs/images/subjects.png" width="30%" alt="科目库" />
+  <img src="docs/images/en/home.png" width="23%" alt="Item-by-item packing checklist" />
+  <img src="docs/images/en/schedule.png" width="23%" alt="Weekly timetable" />
+  <img src="docs/images/en/import.png" width="23%" alt="Offline timetable import" />
+  <img src="docs/images/en/subjects.png" width="23%" alt="Subject library" />
 </p>
 
-<p align="center">
-  <img src="docs/images/completion.png" width="32%" alt="全部装好完成动效" />
-</p>
+## Features
 
-## 为什么安装包会比以前大
+- **Subject library:** Create a subject once and manage all of its carry items in one place.
+- **Item-by-item checks:** Every book and supply has its own check state; a whole subject is never completed at once.
+- **Persistent bag state:** Packed items remain packed across school days until you take them out.
+- **Take-out list:** Items already in the bag but not needed for the current preparation day are shown separately.
+- **Optional everyday items:** Add recurring or one-off items such as an ID card, bottle, or temporary form.
+- **No-carry subjects:** Mark PE, homeroom, and similar subjects as requiring no items.
+- **Smart preparation day:** Before noon, CoursePack prefers today; after noon, it moves to the next day with lessons and skips empty days.
+- **Visual lesson-time picker:** Choose start and end times without typing a time format.
+- **Bulk lesson times:** Select weekdays, first lesson time, lesson duration, break duration, and period count, then preview and apply.
+- **Offline timetable recognition:** Choose an image and use the bundled Chinese OCR model entirely on-device.
+- **Safe bulk import:** Edit recognized or pasted text, review a preview, and confirm before anything is written.
+- **Home-screen widgets:** Dedicated compact 2×2 and large 4×2 layouts with live progress and unpacked-item summaries.
+- **Live and background refresh:** Widgets update after edits, across day changes, after reboot, and after app upgrades.
+- **Motion and haptics:** Directional transitions, item feedback, and a full-screen celebration when everything is packed.
+- **Optional reminder:** Pick a time and receive a notification only when the bag is still unfinished.
+- **English and Chinese UI:** Follow the system language or lock the app to Simplified Chinese or English.
+- **Themes:** System, light, and dark modes with dynamic, violet, ocean, and forest accent palettes.
+- **Local backup and restore:** Export or import lessons, items, checks, and settings through Android's system file picker.
+- **Clean first run:** New installations contain no sample timetable or personal data.
 
-- 使用原生 Android View，不打包网页运行时。
-- 不依赖广告、统计、账号或云服务 SDK。
-- 图标和界面主要使用矢量资源与系统能力。
-- 数据使用系统 `SharedPreferences` 保存在本机。
-- 2.8.0 起内置 ML Kit 中文文字识别模型，不需要首次使用时联网下载；通用 APK 会同时包含多种手机架构所需的识别组件。
-
-除离线识别模型外，应用仍使用原生 Android View 和轻量本地存储；同时支持动态色、深色模式、方向性页面动画、逐项完成反馈、桌面进度卡片以及后台跨日刷新。
-
-## 功能
-
-- **科目库**：先建立科目，再统一设置该科目需要携带的物品。
-- **逐件勾选**：每一本书和每一件用品都有独立状态，不会整科一起完成。
-- **明确触感**：勾选、取消和拿出均有短促原生振动，全部装好时提供更明显的完成节奏。
-- **书包状态沿用**：已经装入书包的物品会延续到之后的上课日，不必每天重复勾选。
-- **拿出提醒**：自动列出已经装好、但当前准备日不需要的物品，并可逐件标记拿出。
-- **每日随身**：可添加不属于任何科目的永久或临时物品；永久项每天重新打卡，临时项只在指定准备日出现。
-- **安全清空**：提供“清空已选”，执行前必须二次确认，不会删除课程资料。
-- **无需携带**：体育、班务等科目可以明确标记为无需准备物品。
-- **智能准备日**：上午优先显示今天；12:00 后切换到下一个有课日，并跳过周末和无课日。
-- **点选课程时间**：开始和结束时间使用 24 小时制选择面板，不需要输入时间格式。
-- **批量生成节次**：选择多个星期，设置首节开始、每节时长、课间时长和节数，即时预览并批量应用。
-- **图片识别课表**：直接选择课程表照片，使用内置中文模型离线识别，并尝试按星期列和节次行重建。
-- **批量导入课表**：识别结果可以先修改，也可以粘贴聊天或表格文字；预览无误后再导入，冲突课程默认跳过。
-- **桌面小组件**：提供紧凑 2×2 与大号 4×2 两种独立布局。
-- **待装摘要**：大号小组件直接显示空心勾选框和仍未装入的物品。
-- **即时同步**：应用内勾选、编辑科目或修改课表后，小组件立即刷新。
-- **后台更新**：跨日、时区变化、重启和应用升级后自动重新计算。
-- **完成反馈**：最后一件物品完成时显示全屏庆祝动画、完成图标和震动。
-- **可选书包提醒**：自行开启并设置时间；只有书包清单尚未完成时才发送通知，完成后保持安静。
-- **首次使用引导**：分四步说明核心流程、通知用途和提醒时间；权限由用户明确触发，可逐项跳过并可在设置中再次查看。
-- **应用内更新说明**：升级后只出现一次，只展示用户能直接使用的新功能。
-- **中英文界面**：可跟随系统语言，也能在设置中固定为简体中文或 English。
-- **主题设置**：支持跟随系统、浅色和深色模式，并提供动态色、紫罗兰、海洋蓝、森林绿四种强调色。
-- **数据概览**：设置页集中显示科目数、周课程数、携带物数量和当前准备日进度。
-- **备份与恢复**：通过 Android 系统文件选择器导出或导入课程、携带物、打卡与设置，不需要存储权限。
-- **完全离线**：不需要账号，没有广告，也不包含网络权限。
-- **干净开始**：全新安装不附带示例课程，首次打开由用户建立自己的科目和课表。
-
-## 基本流程
+## Workflow
 
 ```text
-建立科目和携带物 → 把科目排入每周课表 → 自动生成准备清单 → 逐件装包或拿出
+Create subjects and carry items → Add subjects to the timetable → Get a packing checklist → Pack or take out each item
 ```
 
-## 快速导入课表
+## Import a timetable
 
-在“课表”页点击“批量导入课表”，可以直接选择课程表图片。识别完全在设备本机执行，不会上传照片；表格结构清楚时，应用会尝试按星期和节次重建。识别文字会先放入可编辑区域，必须经过预览确认才会写入课表。
-
-也可以直接粘贴按星期整理的文字：
+On the **Schedule** tab, tap **Import schedule**. Choose a timetable image for offline recognition, or paste text copied from a table, chat, or another OCR app. The result remains editable and is not written until you approve the preview.
 
 ```text
-星期一：语文，数学，英语，体育
-星期二：历史，地理，数学，班会
-星期三：英语，语文，科学，美术
+Monday: Chinese, Mathematics, English, PE
+Tuesday: History, Geography, Mathematics, Homeroom
+Wednesday: English, Chinese, Science, Art
 ```
 
-也支持星期标题后逐行填写，或粘贴从表格、聊天和手机相册文字识别中复制的内容。`空`、`无课`、`-` 会保留对应节次但不创建课程。
+CoursePack uses OCR text positions together with weekday-column and lesson-row cues to reconstruct the table. It is not a keyword-only importer. Clear, front-facing images with complete weekday headers and period numbers work best; merged cells and grouped courses may still need manual correction.
 
-应用会先显示星期、节次和科目的导入预览。已有课程默认跳过；只有手动打开“替换相同星期和节次的课程”后才会覆盖。新科目会进入科目库，并保持“尚未设置携带物”状态，方便之后逐科补充课本和用品。
+`Empty`, `No class`, and `-` preserve a slot without creating a lesson. Existing lessons are skipped by default and are replaced only when you explicitly enable replacement in the preview.
 
-如果原课表包含 `英1/英2/英3/英4`、`数1/数2/数3/数4` 这类分组栏，请在导入前把它改成自己所属的组，例如 `英2`、`数3`。应用不会猜测分组，避免把别人的课程排进你的课表。
+If a timetable contains grouped labels such as `Eng 1/2/3/4` or `Math 1/2/3/4`, replace them with your own group before importing. CoursePack will not guess which group belongs to you.
 
-> 拍照时尽量正对课表、避免反光，并让星期标题和节次编号完整入镜。复杂合并单元格或分组课程仍可能识别错误，请以导入预览为准。
+## Home-screen widgets
 
-## 桌面小组件
-
-| 规格 | 显示内容 |
+| Size | Content |
 | --- | --- |
-| 2×2 | 当前准备日、剩余数量、分段进度和完成状态 |
-| 4×2 | 完整进度，以及最多三件尚未装入的物品 |
+| 2×2 | Preparation day, remaining count, segmented progress, and completion state |
+| 4×2 | Full progress plus up to three items that still need to be packed |
 
-ColorOS 用户可通过以下路径添加：
+On ColorOS, add a widget from:
 
 ```text
-长按桌面空白处 → 卡片 → 全部卡片 → 插件 → 课程包
+Long-press an empty area → Cards → All cards → Plugins → CoursePack
 ```
 
-部分 ColorOS 版本不允许第三方小组件自由缩放，需要移除后重新选择另一种规格。
+Some ColorOS versions do not allow third-party widgets to resize freely. Remove the widget and choose the other size when needed.
 
-## 下载 APK
+## Download
 
-请前往仓库的 **Releases** 页面下载最新 APK：
+Download the latest APK from **[GitHub Releases](../../releases/latest)**.
 
-**[下载最新版本](../../releases/latest)**
+Current source version: **2.9.3 (versionCode 34)**.
 
-当前源码版本：**2.9.3（versionCode 34）**。
+> The repository stores source code only. APKs belong in GitHub Releases, and signing keys must never be committed.
 
-> 仓库只保存源码。APK 应作为 GitHub Release 附件发布，签名密钥不得提交到仓库。
+## Build from source
 
-## 从源码构建
-
-### 环境
-
-- JDK 17 或更高版本
+- JDK 17 or newer
 - Android SDK 36
 - Android Build Tools 36.x
 - Android Gradle Plugin 8.10.1
-- Android Studio，或兼容版本的 Gradle
+- Android Studio, or a compatible Gradle environment
 
-使用 Android Studio 打开仓库根目录，等待 Gradle 同步后构建 `app` 模块即可。
+Open the repository root in Android Studio, wait for Gradle sync, and build the `app` module:
 
 ```text
 Build → Build APK(s)
 ```
 
-项目没有远程服务或第三方账号依赖，编译后即可离线运行。
+The project has no remote service or third-party account dependency and runs offline after compilation.
 
-## 技术信息
+## Technical details
 
-| 项目 | 内容 |
+| Item | Value |
 | --- | --- |
-| 开发语言 | Java |
-| UI | 原生 Android View |
-| 最低系统 | Android 8.0 / API 26 |
-| 编译及目标 API | Android 36 |
-| 数据存储 | SharedPreferences，仅保存在本机 |
-| 网络权限 | 无 |
-| APK 体积 | 47,015,083 bytes，约 44.84 MiB（包含中文离线识别模型） |
+| Language | Java |
+| UI | Native Android View |
+| Minimum Android version | Android 8.0 / API 26 |
+| Compile and target API | Android 36 |
+| Storage | SharedPreferences, local device only |
+| Network permission | None |
+| APK size | About 44.84 MiB, including the bundled Chinese OCR model |
 
-## 权限与隐私
+The APK is larger than earlier releases because the Chinese ML Kit text-recognition model is bundled for offline use, together with native recognition components for multiple phone architectures. The app itself remains a native Android View application with lightweight local storage.
 
-| 权限 | 用途 |
+## Permissions and privacy
+
+| Permission | Purpose |
 | --- | --- |
-| `VIBRATE` | 勾选与全部完成时提供触觉反馈 |
-| `POST_NOTIFICATIONS` | 仅在用户主动开启书包提醒时申请，用于发送未完成提醒 |
-| `RECEIVE_BOOT_COMPLETED` | 重启后恢复小组件跨日更新 |
+| `VIBRATE` | Tactile feedback for checking items and completing the bag |
+| `POST_NOTIFICATIONS` | Requested only when the user enables the optional unfinished-bag reminder |
+| `RECEIVE_BOOT_COMPLETED` | Restores cross-day widget updates after a reboot |
 
-应用的 Manifest 没有声明 `INTERNET` 权限。科目、课表、携带物和书包状态都保存在本机；卸载应用时，Android 会一并删除这些数据。
+The manifest does not declare `INTERNET`. Subjects, timetables, carry items, and bag states stay on the device and are removed by Android when the app is uninstalled.
 
-## 参与贡献
+## Contributing
 
-欢迎提交 Issue 和 Pull Request。修改界面或功能时，请同时检查：
+Issues and pull requests are welcome. When changing UI or behavior, please check light and dark themes, narrow screens, large system text, Android back gestures, reduced motion, both widget sizes, and refresh behavior across day changes and reboot.
 
-- 浅色与深色模式
-- 窄屏与系统大字体
-- Android 返回手势
-- 系统关闭动画后的静态反馈
-- 2×2 与 4×2 两种小组件
-- 跨日和重启后的数据刷新
+Do not commit signing keys, personal timetables, device logs, ADB screenshots containing private data, or other personal information.
 
-请勿提交签名密钥、个人课表、设备日志、ADB 截图或其他私人数据。
+## License
 
-## 许可证
-
-本项目使用 [Apache License 2.0](LICENSE)。
+Licensed under the [Apache License 2.0](LICENSE).
 
 ```text
 SPDX-License-Identifier: Apache-2.0
