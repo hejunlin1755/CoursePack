@@ -98,6 +98,7 @@ public class CoursePackActivity extends Activity {
     private final FrameLayout[] navIndicators = new FrameLayout[3];
     private final ImageView[] navIcons = new ImageView[3];
     private final TextView[] navLabels = new TextView[3];
+    private final ValueAnimator[] navToneAnimators = new ValueAnimator[3];
     private SharedPreferences prefs;
     private FrameLayout root, contentHost;
     private View completionOverlay;
@@ -273,14 +274,23 @@ public class CoursePackActivity extends Activity {
         navIndicators[index] = indicator; navIcons[index] = image; navLabels[index] = label; return item;
     }
 
-    private void showTomorrow(boolean animate) { if (selectedTab == 1 && animate) return; int old=selectedTab; selectedTab=1; swapPage(buildTomorrowPage(), old>1, animate); updateChrome(); }
-    private void showSchedule(boolean animate) { if (selectedTab == 0 && animate) return; int old=selectedTab; selectedTab=0; swapPage(buildSchedulePage(), old>0, animate); updateChrome(); }
-    private void showSubjects(boolean animate) { if (selectedTab == 2 && animate) return; int old=selectedTab; selectedTab=2; swapPage(buildSubjectsPage(), old>2, animate); updateChrome(); }
+    private int tabPosition(int tab){if(tab==1)return 0;if(tab==0)return 1;if(tab==2)return 2;return 3;}
+    private void showTomorrow(boolean animate) { if (selectedTab == 1 && animate) return; int old=selectedTab; selectedTab=1; swapPage(buildTomorrowPage(), tabPosition(1)>tabPosition(old), animate); updateChrome(); }
+    private void showSchedule(boolean animate) { if (selectedTab == 0 && animate) return; int old=selectedTab; selectedTab=0; swapPage(buildSchedulePage(), tabPosition(0)>tabPosition(old), animate); updateChrome(); }
+    private void showSubjects(boolean animate) { if (selectedTab == 2 && animate) return; int old=selectedTab; selectedTab=2; swapPage(buildSubjectsPage(), tabPosition(2)>tabPosition(old), animate); updateChrome(); }
     private void showSettings(boolean animate) { if (selectedTab == 3 && animate) return; if (selectedTab >= 0 && selectedTab <= 2){settingsReturnTab = selectedTab;settingsScrollY=0;} selectedTab = 3; swapPage(buildSettingsPage(), false, animate); updateChrome(); }
     private void returnFromSettings(boolean animate) { if (settingsReturnTab == 0) showSchedule(animate); else if (settingsReturnTab == 2) showSubjects(animate); else showTomorrow(animate); }
 
     private void updateChrome() {
-        for (int i=0;i<3;i++) { boolean active=selectedTab==i; navIndicators[i].setBackground(shape(active?secondary:Color.TRANSPARENT,18,0,0)); navIcons[i].setColorFilter(active?onSecondary:muted); navLabels[i].setTextColor(active?onSecondary:muted); }
+        for (int i=0;i<3;i++) {
+            boolean active=selectedTab==i;FrameLayout indicator=navIndicators[i];ImageView icon=navIcons[i];TextView label=navLabels[i];
+            boolean wasActive=Boolean.TRUE.equals(indicator.getTag());indicator.setTag(active);indicator.animate().cancel();icon.animate().cancel();label.animate().cancel();if(navToneAnimators[i]!=null)navToneAnimators[i].cancel();
+            if(!motionEnabled()||wasActive==active){indicator.setBackground(shape(active?secondary:Color.TRANSPARENT,18,0,0));indicator.setScaleX(1);indicator.setScaleY(1);icon.setColorFilter(active?onSecondary:muted);icon.setTranslationY(0);icon.setRotation(0);label.setTextColor(active?onSecondary:muted);label.setAlpha(1);label.setTranslationY(0);continue;}
+            int from=wasActive?secondary:Color.TRANSPARENT,to=active?secondary:Color.TRANSPARENT;ValueAnimator tone=ValueAnimator.ofObject(new android.animation.ArgbEvaluator(),from,to);navToneAnimators[i]=tone;tone.setDuration(260);tone.setInterpolator(emphasized);tone.addUpdateListener(value->indicator.setBackground(shape((int)value.getAnimatedValue(),18,0,0)));tone.start();
+            indicator.setScaleX(active?.72f:1f);indicator.setScaleY(active?.72f:1f);indicator.animate().scaleX(active?1f:.86f).scaleY(active?1f:.86f).setDuration(active?320:170).setInterpolator(emphasized).withEndAction(()->{if(!Boolean.TRUE.equals(indicator.getTag())){indicator.setScaleX(1);indicator.setScaleY(1);}}).start();
+            icon.setColorFilter(active?onSecondary:muted);icon.setTranslationY(dp(active?3:-2));icon.setRotation(active?8:-8);icon.animate().translationY(0).rotation(0).setDuration(300).setInterpolator(emphasized).start();
+            label.setTextColor(active?onSecondary:muted);label.setAlpha(.55f);label.setTranslationY(dp(active?4:-2));label.animate().alpha(1).translationY(0).setDuration(260).setInterpolator(emphasized).start();
+        }
         if (selectedTab==1 || selectedTab==3) fab.setVisibility(View.GONE); else {
             fab.setVisibility(View.VISIBLE); String title=selectedTab==0?"排一节课":"新建科目"; fab.setText(L(title)); fab.setContentDescription(L(title));
             android.graphics.drawable.Drawable add=getDrawable(R.drawable.ic_add); if(add!=null)add.setTint(onPrimary);
@@ -289,25 +299,25 @@ public class CoursePackActivity extends Activity {
         }
     }
 
-    private void swapPage(View next, boolean down, boolean animate) {
+    private void swapPage(View next, boolean forward, boolean animate) {
         int transition=++pageTransitionId;
         View previous=contentHost.getChildCount()==0?null:contentHost.getChildAt(contentHost.getChildCount()-1);
         for(int i=contentHost.getChildCount()-2;i>=0;i--){View stale=contentHost.getChildAt(i);stale.animate().cancel();contentHost.removeViewAt(i);}
-        if(previous!=null){previous.animate().cancel();previous.setTranslationY(0);previous.setAlpha(1f);}
+        if(previous!=null){previous.animate().cancel();previous.setTranslationX(0);previous.setTranslationY(0);previous.setScaleX(1);previous.setScaleY(1);previous.setAlpha(1f);}
         contentHost.addView(next,new FrameLayout.LayoutParams(-1,-1));
         if(!animate||!motionEnabled()){if(previous!=null&&previous.getParent()==contentHost)contentHost.removeView(previous);return;}
-        next.setTranslationY(dp(down?-42:42));next.setAlpha(.3f);
-        next.animate().translationY(0).alpha(1).setDuration(240).setInterpolator(emphasized).withEndAction(()->finishPageTransition(next,transition)).start();
-        if(previous!=null){View outgoing=previous;outgoing.animate().translationY(dp(down?26:-26)).alpha(0).setDuration(170).setInterpolator(emphasized).withEndAction(()->{if(outgoing.getParent()==contentHost)contentHost.removeView(outgoing);}).start();}
+        next.setTranslationX(dp(forward?52:-52));next.setScaleX(.985f);next.setScaleY(.985f);next.setAlpha(.35f);
+        next.animate().translationX(0).scaleX(1).scaleY(1).alpha(1).setDuration(300).setInterpolator(emphasized).withEndAction(()->finishPageTransition(next,transition)).start();
+        if(previous!=null){View outgoing=previous;outgoing.animate().translationX(dp(forward?-34:34)).scaleX(.99f).scaleY(.99f).alpha(0).setDuration(190).setInterpolator(emphasized).withEndAction(()->{if(outgoing.getParent()==contentHost)contentHost.removeView(outgoing);}).start();}
     }
 
-    private void finishPageTransition(View current,int transition){if(transition!=pageTransitionId||current.getParent()!=contentHost)return;for(int i=contentHost.getChildCount()-1;i>=0;i--){View child=contentHost.getChildAt(i);if(child!=current){child.animate().cancel();contentHost.removeViewAt(i);}}current.setTranslationY(0);current.setAlpha(1f);}
+    private void finishPageTransition(View current,int transition){if(transition!=pageTransitionId||current.getParent()!=contentHost)return;for(int i=contentHost.getChildCount()-1;i>=0;i--){View child=contentHost.getChildAt(i);if(child!=current){child.animate().cancel();contentHost.removeViewAt(i);}}current.setTranslationX(0);current.setScaleX(1);current.setScaleY(1);current.setAlpha(1f);}
 
     private void addPageHeader(LinearLayout page,String title,String subtitle,int bottomMargin){
         LinearLayout top=new LinearLayout(this);top.setOrientation(LinearLayout.HORIZONTAL);top.setGravity(Gravity.CENTER_VERTICAL);
         TextView heading=label(title,32,text,true);heading.setLetterSpacing(-.02f);top.addView(heading,new LinearLayout.LayoutParams(0,dp(52),1));
-        if(selectedTab==2){ImageView settings=settingsButton();top.addView(settings,lp(48,48));}page.addView(top);
-        page.addView(label(subtitle,15,muted,false),margin(-1,-2,0,2,0,bottomMargin));
+        if(selectedTab==2){ImageView settings=settingsButton();top.addView(settings,lp(48,48));}
+        if(subtitle==null||subtitle.trim().isEmpty())page.addView(top,margin(-1,52,0,0,0,bottomMargin));else{page.addView(top);page.addView(label(subtitle,15,muted,false),margin(-1,-2,0,2,0,bottomMargin));}
     }
 
     private ImageView settingsButton(){ImageView button=iconButton(R.drawable.ic_settings,"设置");button.setColorFilter(onPrimaryContainer);button.setPadding(dp(12),dp(12),dp(12),dp(12));button.setBackground(ripple(primaryContainer,18));button.setOnClickListener(v->showSettings(true));return button;}
@@ -403,8 +413,8 @@ public class CoursePackActivity extends Activity {
 
     private void renderOnboardingStep(boolean forward){
         if(onboardingStage==null)return;
-        String[] titles={T("明天带什么，一眼就知道","Know what to pack at a glance"),T("先允许整理提醒","Allow packing reminders"),T("什么时候提醒你？","When should we remind you?"),T("准备好了","You're ready")};
-        String[] bodies={T("课程、课本和用品汇成一份清单，逐件装进书包。","Courses, books, and supplies become one clear checklist."),T("只有到时间仍未整理完，课程包才会提醒。通知可随时关闭。","CoursePack only notifies you when packing is still unfinished. You can turn it off anytime."),T("默认晚上 20:00 提醒。点时间可以调整；不想用也可以跳过。","The default is 20:00. Tap the time to change it, or skip reminders entirely."),T("下一步导入课表，再给科目设置需要携带的物品。","Next, import your timetable and set carry items for each subject.")};
+        String[] titles={T("书包不用每天重装","Pack only the changes"),T("只在没整理完时提醒","Reminders only when unfinished"),T("选择一个提醒时间","Choose a reminder time"),T("开始建立你的课程包","Build your CoursePack")};
+        String[] bodies={T("已经装好的继续留着。课程发生变化时，只处理该放进和该拿出的物品。","Keep what is already packed. When lessons change, only add what is missing and take out what is no longer needed."),T("允许通知后，只有清单到时间仍未完成才会提醒；随时都能在设置里关闭。","Allow notifications and CoursePack will only remind you when the checklist is still unfinished. Turn it off anytime in Settings."),T("默认 20:00。点按时间即可调整，不需要提醒也可以直接跳过。","The default is 20:00. Tap the time to adjust it, or skip reminders entirely."),T("导入或手动建立课表，再为每个科目设置一次携带物。之后只需处理每天的变化。","Import or build your schedule, set each subject's items once, then handle only the daily changes.")};
         LinearLayout page=column();page.setGravity(Gravity.CENTER_HORIZONTAL);page.setPadding(dp(8),dp(12),dp(8),dp(16));
         View hero=buildOnboardingHero(onboardingStep);page.addView(hero,lp(-1,224));
         TextView titleView=label(titles[onboardingStep],30,text,true);titleView.setGravity(Gravity.CENTER);titleView.setLetterSpacing(-.02f);page.addView(titleView,margin(-1,-2,8,20,8,0));
@@ -429,8 +439,8 @@ public class CoursePackActivity extends Activity {
         if(step==0){icon.setImageResource(R.drawable.ic_launcher_generated_v2);icon.setPadding(dp(13),dp(13),dp(13),dp(13));}
         else{icon.setImageResource(step==1?R.drawable.ic_notification:step==2?R.drawable.ic_today:R.drawable.ic_check);icon.setColorFilter(step==3?onTertiaryContainer:onPrimaryContainer);icon.setPadding(dp(40),dp(40),dp(40),dp(40));}
         FrameLayout.LayoutParams iconP=new FrameLayout.LayoutParams(dp(166),dp(166),Gravity.CENTER);hero.addView(icon,iconP);
-        int[] colors={primary,warningAccent,success};String[] marks=step==0?new String[]{"语","数","英"}:step==1?new String[]{"8","✓","!"}:step==2?new String[]{"19","20","21"}:new String[]{"✓","✓","✓"};
-        for(int i=0;i<3;i++){TextView chip=label(marks[i],12,i==0?onPrimary:(dark?0xFF172117:Color.WHITE),true);chip.setTag("chip"+i);chip.setGravity(Gravity.CENTER);chip.setBackground(shape(colors[i],14,0,0));FrameLayout.LayoutParams p=new FrameLayout.LayoutParams(dp(38),dp(38),Gravity.CENTER);p.leftMargin=dp((i-1)*70);p.topMargin=dp(i==1?-78:72);hero.addView(chip,p);}
+        if(step>0){int[] colors={primary,warningAccent,success};String[] marks=step==1?new String[]{"8","✓","!"}:step==2?new String[]{"19","20","21"}:new String[]{"✓","✓","✓"};
+        for(int i=0;i<3;i++){TextView chip=label(marks[i],12,i==0?onPrimary:(dark?0xFF172117:Color.WHITE),true);chip.setTag("chip"+i);chip.setGravity(Gravity.CENTER);chip.setBackground(shape(colors[i],14,0,0));FrameLayout.LayoutParams p=new FrameLayout.LayoutParams(dp(38),dp(38),Gravity.CENTER);p.leftMargin=dp((i-1)*70);p.topMargin=dp(i==1?-78:72);hero.addView(chip,p);}}
         return hero;
     }
 
@@ -438,7 +448,7 @@ public class CoursePackActivity extends Activity {
         if(!motionEnabled())return;View halo=hero.findViewWithTag("halo"),icon=hero.findViewWithTag("heroIcon");
         halo.setScaleX(.64f);halo.setScaleY(.64f);halo.setRotation(-10);halo.setAlpha(0);halo.animate().scaleX(1).scaleY(1).rotation(0).alpha(1).setDuration(520).setInterpolator(emphasized).start();
         icon.setScaleX(.72f);icon.setScaleY(.72f);icon.setRotation(8);icon.setAlpha(0);icon.animate().scaleX(1).scaleY(1).rotation(0).alpha(1).setStartDelay(70).setDuration(520).setInterpolator(emphasized).start();
-        for(int i=0;i<3;i++){View chip=hero.findViewWithTag("chip"+i);chip.setAlpha(0);chip.setScaleX(.35f);chip.setScaleY(.35f);chip.setRotation((i-1)*18);chip.setTranslationY(dp(i==1?-24:24));chip.animate().alpha(1).scaleX(1).scaleY(1).rotation(0).translationY(0).setStartDelay(150+i*85L).setDuration(390).setInterpolator(emphasized).start();}
+        for(int i=0;i<3;i++){View chip=hero.findViewWithTag("chip"+i);if(chip==null)continue;chip.setAlpha(0);chip.setScaleX(.35f);chip.setScaleY(.35f);chip.setRotation((i-1)*18);chip.setTranslationY(dp(i==1?-24:24));chip.animate().alpha(1).scaleX(1).scaleY(1).rotation(0).translationY(0).setStartDelay(150+i*85L).setDuration(390).setInterpolator(emphasized).start();}
     }
 
     private void animateOnboardingAction(Runnable action){
@@ -452,8 +462,8 @@ public class CoursePackActivity extends Activity {
     }
 
     private void morphOnboardingFab(int step){
-        if(onboardingNext==null||onboardingNextIcon==null)return;float[] target=switch(step%3){case 0->new float[]{32f,32f,32f,32f};case 1->new float[]{22f,22f,22f,22f};default->new float[]{14f,32f,14f,32f};};float targetRotation=step*360f;boolean finish=step==3;
-        swapOnboardingFabIcon(finish);
+        if(onboardingNext==null||onboardingNextIcon==null)return;float[] target=switch(step%3){case 0->new float[]{32f,32f,32f,32f};case 1->new float[]{22f,22f,22f,22f};default->new float[]{14f,32f,14f,32f};};float targetRotation=step*360f;
+        swapOnboardingFabIcon(false);
         if(!motionEnabled()){applyOnboardingFabCorners(target);onboardingNext.setRotation(0);onboardingNextIcon.setRotation(0);onboardingFabCorners=target;onboardingFabRotation=targetRotation;return;}
         if(onboardingFabCornerAnimator!=null)onboardingFabCornerAnimator.cancel();if(onboardingFabRotationAnimator!=null)onboardingFabRotationAnimator.cancel();
         float[] start=onboardingFabCorners.clone();ValueAnimator corners=ValueAnimator.ofFloat(0f,1f);onboardingFabCornerAnimator=corners;corners.setDuration(600);corners.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());corners.addUpdateListener(value->{float progress=(float)value.getAnimatedValue();float[] now=new float[4];for(int i=0;i<4;i++)now[i]=start[i]+(target[i]-start[i])*progress;onboardingFabCorners=now;applyOnboardingFabCorners(now);});corners.start();
@@ -494,9 +504,9 @@ public class CoursePackActivity extends Activity {
 
     private View settingsDataCard(){
         LinearLayout card=column();card.setPadding(dp(8),dp(6),dp(8),dp(6));card.setBackground(shape(surfaceHigh,22,0,0));
-        card.addView(settingsActionRow(R.drawable.ic_export,"导出备份","保存课程、携带物、打卡和设置",this::startBackupExport),lp(-1,68));
+        card.addView(settingsActionRow(R.drawable.ic_import,"导入备份",T("从课程包备份文件恢复全部本地数据","Restore all local data from a CoursePack backup"),this::startBackupImport),lp(-1,68));
         View divider=new View(this);divider.setBackgroundColor(outline);card.addView(divider,margin(-1,1,56,0,12,0));
-        card.addView(settingsActionRow(R.drawable.ic_import,"导入备份","从课程包备份文件恢复数据",this::startBackupImport),lp(-1,68));
+        card.addView(settingsActionRow(R.drawable.ic_export,"导出备份",T("包括课表、携带物、已装书包状态、随身物品和设置","Includes schedules, carry items, packed-bag state, daily items, and settings"),this::startBackupExport),lp(-1,76));
         return card;
     }
 
@@ -512,7 +522,7 @@ public class CoursePackActivity extends Activity {
     }
 
     private void startBackupImport(){
-        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("application/json");startActivityForResult(intent,REQUEST_IMPORT_BACKUP);
+        Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);intent.addCategory(Intent.CATEGORY_OPENABLE);intent.setType("*/*");intent.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"application/json","text/json","text/plain","application/octet-stream"});startActivityForResult(intent,REQUEST_IMPORT_BACKUP);
     }
 
     @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
@@ -527,12 +537,12 @@ public class CoursePackActivity extends Activity {
 
     private JSONObject createBackupJson() throws Exception{
         JSONObject rootObject=new JSONObject();rootObject.put("format","coursepack-backup");rootObject.put("formatVersion",BACKUP_FORMAT_VERSION);rootObject.put("appVersion","2.9.3");rootObject.put("exportedAt",java.time.OffsetDateTime.now().toString());JSONObject data=new JSONObject();
-        for(Map.Entry<String,?> entry:prefs.getAll().entrySet()){if(KEY_IMPORT_SUCCESS.equals(entry.getKey()))continue;Object value=entry.getValue();JSONObject item=new JSONObject();if(value instanceof String){item.put("type","string");item.put("value",value);}else if(value instanceof Boolean){item.put("type","boolean");item.put("value",value);}else if(value instanceof Integer){item.put("type","integer");item.put("value",value);}else if(value instanceof Long){item.put("type","long");item.put("value",value);}else if(value instanceof Float){item.put("type","float");item.put("value",value);}else if(value instanceof Set){item.put("type","stringSet");JSONArray values=new JSONArray();for(Object member:(Set<?>)value)if(member instanceof String)values.put(member);item.put("value",values);}else continue;data.put(entry.getKey(),item);}
+        for(Map.Entry<String,?> entry:prefs.getAll().entrySet()){if(KEY_IMPORT_SUCCESS.equals(entry.getKey())||!isAllowedBackupKey(entry.getKey()))continue;Object value=entry.getValue();JSONObject item=new JSONObject();if(value instanceof String){item.put("type","string");item.put("value",value);}else if(value instanceof Boolean){item.put("type","boolean");item.put("value",value);}else if(value instanceof Integer){item.put("type","integer");item.put("value",value);}else if(value instanceof Long){item.put("type","long");item.put("value",value);}else if(value instanceof Float){item.put("type","float");item.put("value",value);}else if(value instanceof Set){item.put("type","stringSet");JSONArray values=new JSONArray();for(Object member:(Set<?>)value)if(member instanceof String)values.put(member);item.put("value",values);}else continue;data.put(entry.getKey(),item);}
         rootObject.put("data",data);return rootObject;
     }
 
     private void readBackupForImport(Uri uri){
-        try(InputStream stream=getContentResolver().openInputStream(uri)){if(stream==null)throw new IllegalStateException("no input stream");ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int read,total=0;while((read=stream.read(buffer))!=-1){total+=read;if(total>MAX_BACKUP_BYTES)throw new IllegalArgumentException("too large");bytes.write(buffer,0,read);}JSONObject backup=new JSONObject(bytes.toString(StandardCharsets.UTF_8.name()));validateBackup(backup);showImportConfirmation(backup);}
+        try(InputStream stream=getContentResolver().openInputStream(uri)){if(stream==null)throw new IllegalStateException("no input stream");ByteArrayOutputStream bytes=new ByteArrayOutputStream();byte[] buffer=new byte[8192];int read,total=0;while((read=stream.read(buffer))!=-1){total+=read;if(total>MAX_BACKUP_BYTES)throw new IllegalArgumentException("too large");bytes.write(buffer,0,read);}String json=bytes.toString(StandardCharsets.UTF_8.name()).trim();if(!json.isEmpty()&&json.charAt(0)=='\uFEFF')json=json.substring(1).trim();JSONObject backup=new JSONObject(json);validateBackup(backup);showImportConfirmation(backup);}
         catch(Exception error){showTransientMessage("无法读取备份，请选择课程包导出的文件");}
     }
 
@@ -543,14 +553,15 @@ public class CoursePackActivity extends Activity {
     private boolean isAllowedBackupKey(String key){return KEY_LEGACY_COURSES.equals(key)||KEY_SUBJECTS.equals(key)||KEY_ENTRIES.equals(key)||KEY_CHECKS.equals(key)||KEY_DAILY_ITEMS.equals(key)||KEY_DAILY_CHECKS.equals(key)||key.startsWith(KEY_TIME_SLOT_PREFIX)||key.startsWith("settings_");}
 
     private void showImportConfirmation(JSONObject backup){
-        JSONObject data=backup.optJSONObject("data");String subjectsRaw=backupString(data,KEY_SUBJECTS);String entriesRaw=backupString(data,KEY_ENTRIES);int subjectCount=countBackupLines(subjectsRaw);int entryCount=countBackupLines(entriesRaw);Dialog dialog=bottomDialog();LinearLayout sheet=sheet("导入这份备份？","将替换当前设备上的课程、打卡和设置。备份包含 "+subjectCount+" 个科目、"+entryCount+" 节周课程。");LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);TextView cancel=button("取消",false);TextView confirm=button("确认导入",true);actions.addView(cancel,new LinearLayout.LayoutParams(0,dp(52),1));LinearLayout.LayoutParams confirmParams=new LinearLayout.LayoutParams(0,dp(52),1);confirmParams.setMargins(dp(12),0,0,0);actions.addView(confirm,confirmParams);sheet.addView(actions);cancel.setOnClickListener(v->dialog.dismiss());confirm.setOnClickListener(v->{try{applyBackup(backup);dialog.dismiss();}catch(Exception error){dialog.dismiss();showTransientMessage("导入失败，原有数据没有改变");}});showBottomDialog(dialog,sheet);
+        JSONObject data=backup.optJSONObject("data");String subjectsRaw=backupString(data,KEY_SUBJECTS);String entriesRaw=backupString(data,KEY_ENTRIES);int subjectCount=countBackupLines(subjectsRaw);int entryCount=countBackupLines(entriesRaw);int packedCount=countBackupSet(data,KEY_CHECKS);String summary=T("将替换当前设备上的全部本地数据。包含 "+subjectCount+" 个科目、"+entryCount+" 节周课程，以及 "+packedCount+" 件当前已装在书包中的物品；随身物品和设置也会恢复。","This replaces all local data on this device. The backup contains "+subjectCount+" subjects, "+entryCount+" weekly lessons, and "+packedCount+" items currently packed; daily items and settings will also be restored.");Dialog dialog=bottomDialog();LinearLayout sheet=sheet("导入这份备份？",summary);LinearLayout actions=new LinearLayout(this);actions.setOrientation(LinearLayout.HORIZONTAL);TextView cancel=button("取消",false);TextView confirm=button("确认导入",true);actions.addView(cancel,new LinearLayout.LayoutParams(0,dp(52),1));LinearLayout.LayoutParams confirmParams=new LinearLayout.LayoutParams(0,dp(52),1);confirmParams.setMargins(dp(12),0,0,0);actions.addView(confirm,confirmParams);sheet.addView(actions);cancel.setOnClickListener(v->dialog.dismiss());confirm.setOnClickListener(v->{try{applyBackup(backup);dialog.dismiss();}catch(Exception error){dialog.dismiss();showTransientMessage("导入失败，原有数据没有改变");}});showBottomDialog(dialog,sheet);
     }
 
     private String backupString(JSONObject data,String key){if(data==null)return"";JSONObject item=data.optJSONObject(key);return item==null?"":item.optString("value","");}
     private int countBackupLines(String raw){if(raw==null||raw.isEmpty())return 0;return raw.split("\\n",-1).length;}
+    private int countBackupSet(JSONObject data,String key){if(data==null)return 0;JSONObject item=data.optJSONObject(key);JSONArray values=item==null?null:item.optJSONArray("value");return values==null?0:values.length();}
 
     private void applyBackup(JSONObject backup) throws Exception{
-        JSONObject data=backup.getJSONObject("data");SharedPreferences.Editor editor=prefs.edit().clear();java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String key=keys.next();JSONObject item=data.getJSONObject(key);String type=item.getString("type");switch(type){case"string"->editor.putString(key,item.getString("value"));case"boolean"->editor.putBoolean(key,item.getBoolean("value"));case"integer"->editor.putInt(key,item.getInt("value"));case"long"->editor.putLong(key,item.getLong("value"));case"float"->editor.putFloat(key,(float)item.getDouble("value"));case"stringSet"->{JSONArray array=item.getJSONArray("value");Set<String> values=new HashSet<>();for(int i=0;i<array.length();i++)values.add(array.getString(i));editor.putStringSet(key,values);}}}editor.putBoolean(KEY_IMPORT_SUCCESS,true);if(!editor.commit())throw new IllegalStateException("commit");TomorrowWidgetProvider.refreshAll(this);PackingReminderReceiver.schedule(this);recreate();
+        JSONObject data=backup.getJSONObject("data");SharedPreferences.Editor editor=prefs.edit().clear();java.util.Iterator<String> keys=data.keys();while(keys.hasNext()){String key=keys.next();if(!isAllowedBackupKey(key))continue;JSONObject item=data.getJSONObject(key);String type=item.getString("type");switch(type){case"string"->editor.putString(key,item.getString("value"));case"boolean"->editor.putBoolean(key,item.getBoolean("value"));case"integer"->editor.putInt(key,item.getInt("value"));case"long"->editor.putLong(key,item.getLong("value"));case"float"->editor.putFloat(key,(float)item.getDouble("value"));case"stringSet"->{JSONArray array=item.getJSONArray("value");Set<String> values=new HashSet<>();for(int i=0;i<array.length();i++)values.add(array.getString(i));editor.putStringSet(key,values);}}}editor.putBoolean(KEY_IMPORT_SUCCESS,true);if(!editor.commit())throw new IllegalStateException("commit");TomorrowWidgetProvider.refreshAll(this);PackingReminderReceiver.schedule(this);recreate();
     }
 
     private void showTransientMessage(String message){
@@ -677,7 +688,7 @@ public class CoursePackActivity extends Activity {
     private void buildProgressSegments(LinearLayout row,int total,int done){for(int i=0;i<total;i++){View segment=new View(this);segment.setBackground(shape(i<done?primary:secondary,4,0,0));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(8),1);if(i>0)p.setMargins(dp(5),0,0,0);row.addView(segment,p);}row.setContentDescription(L("已装好 "+done+" 件，共 "+total+" 件"));}
 
     private View buildSchedulePage(){
-        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);LinearLayout page=column();page.setPadding(dp(20),dp(22),dp(20),dp(112));addPageHeader(page,"本周课表","课表只安排科目，携带物统一在科目库管理",18);page.addView(buildDaySelector(),margin(-1,52,0,0,0,10));
+        ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);LinearLayout page=column();page.setPadding(dp(20),dp(22),dp(20),dp(112));addPageHeader(page,"本周课表","",18);page.addView(buildDaySelector(),margin(-1,52,0,0,0,10));
         LinearLayout tools=new LinearLayout(this);tools.setOrientation(LinearLayout.HORIZONTAL);TextView importText=button("批量导入课表",false);importText.setContentDescription(L("从图片或文字导入课程表"));importText.setOnClickListener(v->showScheduleTextImport());tools.addView(importText,new LinearLayout.LayoutParams(0,dp(50),1));TextView batchTime=button("设置节次时间",false);batchTime.setContentDescription(L("批量设置星期一到星期五的节次时间"));batchTime.setOnClickListener(v->showBatchTimeEditor());LinearLayout.LayoutParams timeParams=new LinearLayout.LayoutParams(0,dp(50),1);timeParams.setMargins(dp(16),0,0,0);tools.addView(batchTime,timeParams);page.addView(tools,margin(-1,50,0,0,0,22));
         List<Entry> day=entriesFor(selectedDay);LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);heading.addView(label(DAYS[selectedDay],22,text,true),new LinearLayout.LayoutParams(0,dp(40),1));TextView count=label(day.size()+" 节课",13,onPrimaryContainer,true);count.setGravity(Gravity.CENTER);count.setBackground(shape(primaryContainer,16,0,0));heading.addView(count,lp(english?88:70,34));page.addView(heading,margin(-1,40,0,0,0,10));if(day.isEmpty())page.addView(emptyState("这天没有课","可以批量导入，也可以点“排一节课”手动添加。"));else page.addView(scheduleList(day));scroll.addView(page);return scroll;
     }
@@ -725,7 +736,7 @@ public class CoursePackActivity extends Activity {
     private View scheduleList(List<Entry> list){LinearLayout group=column();group.setBackground(shape(surfaceHigh,24,0,0));group.setClipToOutline(true);for(int i=0;i<list.size();i++){Entry entry=list.get(i);group.addView(scheduleRow(entry,subjectById(entry.subjectId)));if(i<list.size()-1){View divider=new View(this);divider.setBackgroundColor(outline);group.addView(divider,margin(-1,1,72,0,16,0));}}return group;}
     private View scheduleRow(Entry entry,Subject subject){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(12),dp(10),dp(8),dp(10));row.setMinimumHeight(dp(84));row.setBackground(ripple(surfaceHigh,0));TextView period=label(String.valueOf(entry.period),15,onPrimaryContainer,true);period.setGravity(Gravity.CENTER);period.setBackground(shape(primaryContainer,14,0,0));row.addView(period,margin(48,48,0,0,10,0));LinearLayout body=column();String name=subject==null?"已删除的科目":subject.name;body.addView(label(name,17,text,true));body.addView(label(entry.time,12,primary,true),margin(-1,-2,0,3,0,0));TextView summary=label(subject==null?"请重新选择科目":subjectSummary(subject),13,subject!=null&&!subject.noItems&&subject.items.isEmpty()?primary:muted,false);summary.setMaxLines(2);body.addView(summary,margin(-1,-2,0,2,0,0));row.addView(body,new LinearLayout.LayoutParams(0,-2,1));ImageView arrow=iconButton(R.drawable.ic_chevron_right,"编辑这节课");row.addView(arrow,lp(40,48));row.setContentDescription("编辑第 "+entry.period+" 节 "+name);row.setOnClickListener(v->showScheduleEditor(entry));arrow.setOnClickListener(v->showScheduleEditor(entry));row.setClickable(true);return row;}
 
-    private View buildSubjectsPage(){ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);LinearLayout page=column();page.setPadding(dp(20),dp(22),dp(20),dp(112));addPageHeader(page,"科目库","每个科目只设置一次携带物，所有课表自动同步",18);page.addView(dailyItemsManagementRow(),margin(-1,72,0,0,0,22));if(subjects.isEmpty())page.addView(emptyState("还没有科目","先新建科目和需要携带的物品，再去课表排课。"));else{LinearLayout list=column();list.setBackground(shape(surfaceHigh,24,0,0));list.setClipToOutline(true);for(int i=0;i<subjects.size();i++){list.addView(subjectRow(subjects.get(i)));if(i<subjects.size()-1){View divider=new View(this);divider.setBackgroundColor(outline);list.addView(divider,margin(-1,1,72,0,16,0));}}page.addView(list);}scroll.addView(page);return scroll;}
+    private View buildSubjectsPage(){ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);LinearLayout page=column();page.setPadding(dp(20),dp(22),dp(20),dp(112));addPageHeader(page,"科目库","",18);page.addView(dailyItemsManagementRow(),margin(-1,72,0,0,0,22));if(subjects.isEmpty())page.addView(emptyState("还没有科目","先新建科目和需要携带的物品，再去课表排课。"));else{LinearLayout list=column();list.setBackground(shape(surfaceHigh,24,0,0));list.setClipToOutline(true);for(int i=0;i<subjects.size();i++){list.addView(subjectRow(subjects.get(i)));if(i<subjects.size()-1){View divider=new View(this);divider.setBackgroundColor(outline);list.addView(divider,margin(-1,1,72,0,16,0));}}page.addView(list);}scroll.addView(page);return scroll;}
     private View dailyItemsManagementRow(){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(12),dp(8),dp(8),dp(8));row.setBackground(ripple(surfaceHigh,20));TextView token=label("随",16,onPrimaryContainer,true);token.setGravity(Gravity.CENTER);token.setBackground(shape(primaryContainer,14,0,0));row.addView(token,margin(48,48,0,0,12,0));LinearLayout copy=column();copy.addView(label("每日随身物品",16,text,true));int permanentCount=0;for(DailyItem item:dailyItems)if(item.permanent)permanentCount++;String summary=dailyItems.isEmpty()?"未启用 · 可选功能":dailyItems.size()+" 件 · "+permanentCount+" 件每天出现";copy.addView(label(summary,13,muted,false),margin(-1,-2,0,3,0,0));row.addView(copy,new LinearLayout.LayoutParams(0,-2,1));ImageView arrow=iconButton(R.drawable.ic_chevron_right,"管理每日随身物品");row.addView(arrow,lp(40,48));row.setContentDescription("每日随身物品，"+summary);row.setOnClickListener(v->{if(dailyItems.isEmpty())showDailyItemEditor(null);else showDailyItemsManager();});arrow.setOnClickListener(v->{if(dailyItems.isEmpty())showDailyItemEditor(null);else showDailyItemsManager();});row.setClickable(true);return row;}
     private View subjectRow(Subject subject){LinearLayout row=new LinearLayout(this);row.setOrientation(LinearLayout.HORIZONTAL);row.setGravity(Gravity.CENTER_VERTICAL);row.setPadding(dp(12),dp(12),dp(8),dp(12));row.setBackground(ripple(surfaceHigh,0));TextView token=label(subject.name.isEmpty()?"科":subject.name.substring(0,1),16,onPrimaryContainer,true);token.setGravity(Gravity.CENTER);token.setBackground(shape(primaryContainer,14,0,0));row.addView(token,margin(48,48,0,0,12,0));LinearLayout body=column();body.addView(label(subject.name,17,text,true));TextView summary=label(subjectSummary(subject),13,!subject.noItems&&subject.items.isEmpty()?primary:muted,false);summary.setMaxLines(3);body.addView(summary,margin(-1,-2,0,4,0,0));row.addView(body,new LinearLayout.LayoutParams(0,-2,1));ImageView arrow=iconButton(R.drawable.ic_chevron_right,"编辑 "+subject.name);row.addView(arrow,lp(40,48));row.setOnClickListener(v->showSubjectEditor(subject));arrow.setOnClickListener(v->showSubjectEditor(subject));row.setClickable(true);return row;}
 
