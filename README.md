@@ -101,7 +101,7 @@ Some ColorOS versions do not allow third-party widgets to resize freely. Remove 
 
 Download the latest APK from **[GitHub Releases](../../releases/latest)**.
 
-Current source version: **2.9.3 (versionCode 34)**.
+Current source version: **2.9.4 (versionCode 35)**.
 
 > The repository stores source code only. APKs belong in GitHub Releases, and signing keys must never be committed.
 

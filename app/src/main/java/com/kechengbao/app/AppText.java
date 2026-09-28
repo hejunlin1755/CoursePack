@@ -75,7 +75,7 @@ final class AppText {
             case "提醒时间" -> "Reminder time";
             case "调整提醒时间" -> "Change reminder time";
             case "版本更新" -> "What's new";
-            case "查看 2.9.0 的新功能" -> "See what's new in 2.9.0";
+            case "查看 2.9.4 的新功能" -> "See what's new in 2.9.4";
             case "使用引导" -> "Getting started";
             case "重新查看第一次使用流程" -> "View the first-use guide again";
             case "跳过" -> "Skip";
@@ -83,7 +83,14 @@ final class AppText {
             case "上一步" -> "Back";
             case "下一步" -> "Next";
             case "导入课表" -> "Import timetable";
-            case "2.9.0 更新" -> "What's new in 2.9.0";
+            case "2.9.4 更新" -> "What's new in 2.9.4";
+            case "引导、页面切换和备份恢复更加可靠" -> "More reliable onboarding, navigation, and backup restore";
+            case "新手引导更清楚" -> "Clearer onboarding";
+            case "围绕保留书包现状、只处理增减重新组织文案，并恢复最后一步的前进箭头。" -> "Reframed onboarding around keeping the current bag and changing only what is needed, with the forward arrow restored on the final step.";
+            case "切换动画更连贯" -> "Smoother navigation";
+            case "底部三个页面现在使用可中断的共享轴与选中状态过渡。" -> "The three bottom destinations now use interruptible shared-axis and selection transitions.";
+            case "备份可以完整恢复" -> "Complete backup restore";
+            case "支持更多备份文件类型，并明确包含当前已装书包状态。" -> "Supports more backup file types and clearly includes the current packed-bag state.";
             case "只展示这次可以直接用到的新功能" -> "Only the changes you can use right away";
             case "按时整理书包" -> "Pack on time";
             case "设定提醒时间；只有清单尚未完成时才会通知。" -> "Choose a reminder time. You are notified only when the checklist is unfinished.";
@@ -105,7 +112,7 @@ final class AppText {
             case "导入失败，原有数据没有改变" -> "Import failed. Your existing data was not changed";
             case "备份已导入" -> "Backup imported";
             case "关于" -> "About";
-            case "课程包 2.7.0" -> "CoursePack 2.7.0";
+            case "课程包 2.9.4" -> "CoursePack 2.9.4";
             case "数据仅保存在本机 · 无需联网" -> "Stored only on this device · Works offline";
             case "排一节课" -> "Add lesson";
             case "新建科目" -> "New subject";
